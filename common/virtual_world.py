@@ -1,6 +1,12 @@
 """Defines a top level container object for a virtual world."""
 
 
+import time
+
+from sys import exit
+
+
+
 class VirtualWorld:
     """Models a virtual world for the trading simulation."""
 
@@ -21,6 +27,8 @@ class VirtualWorld:
         self.TARGET_NUMBER_SCHEDULES = target_num_schedules
         self.DEPTH_BOUND = depth_bound
         self.MAX_FRONTIER_SIZE = frontier_size_limit
+
+        self._schedules = []
 
         return
     
@@ -69,3 +77,17 @@ class VirtualWorld:
         
         return STR
     
+
+    def run_simulation(self):
+        """Run the simulation to find solution schedules."""
+        print("Running the simulation, terminate early with Ctrl + c.")
+
+        try:
+            while True:
+                time.sleep(1)
+
+        except KeyboardInterrupt:
+            # User interrupt the program with ctrl+c
+            print("User has halted simulation execution early.")
+
+        return

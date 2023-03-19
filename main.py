@@ -7,10 +7,13 @@ from util import load_initial_state_file, load_resources_file, parse_transform_t
 
 
 
-def country_scheduler(your_country_name, resources_filename,
-initial_state_file_name, output_schedule_file_name,
-num_output_schedules, depth_bound,
-frontier_max_size):
+def country_scheduler(your_country_name, 
+    resources_filename,
+    initial_state_file_name, 
+    output_schedule_file_name,
+    num_output_schedules, 
+    depth_bound,
+    frontier_max_size):
     """Top level method for running a simulation."""
     print("Creating a virtual world....\n\n\n")
     virtual_world = init_simulation(your_country_name, 
@@ -20,6 +23,12 @@ frontier_max_size):
         depth_bound=depth_bound, frontier_max_size=frontier_max_size)
     
     print(virtual_world)
+
+    print("\n\n\n\n\n\n\n\n\n")
+    print("Running the simulation....")
+    virtual_world.run_simulation()
+
+    return
 
 
 def init_simulation(primary_country_actor, 
