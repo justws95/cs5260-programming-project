@@ -101,7 +101,7 @@ class WorldState:
         return
     
     def get_world_dict(self):
-        """Get a dict representing the world state.
+        """Get a Python dictionary representing the world state.
 
         Returns:
         world_dict -- a Python dictionary representing the world state
@@ -110,7 +110,7 @@ class WorldState:
     
 
     def set_world_dict(self, world_dict):
-        """Set a dict representing the world state.
+        """Set a Python dictionary representing the world state.
 
         Keyword arguments:
         world_dict -- a Python dictionary representing the world state

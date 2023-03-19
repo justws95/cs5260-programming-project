@@ -19,5 +19,7 @@ def init_simulation():
 
 if __name__ == "__main__":
     print("Starting the program.")
+    print("")
+    print("")
     init_simulation()
     #country_scheduler()
