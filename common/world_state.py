@@ -22,6 +22,27 @@ class WorldState:
 
         return
     
+    
+    def __str__(self):
+        """Define the string representation of this virtual world.
+
+        Returns:
+        STR -- the string representation of this class instance
+        """
+        STR = ""
+
+        for c in self._countries:
+            STR += f"{c}\n"
+            STR += "-"*20 + "\n"
+
+            for r in self._resources:
+                STR += f"  {r}: {self._world_dict[c][r]}\n"
+            
+            STR += "\n"
+
+
+        return STR
+    
 
     def _instantiate_from_state_df(self, world_state_df):
         """Create an initial world state from a input pandas.DataFrame.

@@ -12,6 +12,23 @@ class ResourceWeights:
 
         return
     
+
+    def __str__(self):
+        """Define the string representation of this virtual world.
+
+        Returns:
+        STR -- the string representation of this class instance
+        """
+        STR = ""
+
+        for key, val in self._weights_dict.items():
+            STR += f"  {key}: {val}\n"
+
+        STR += "\n"
+
+        return STR
+    
+
     def _initialize_weights(self, weights_df):
         """Create a weight dictionary from a pandas.DataFrame."""
         weights = {}

@@ -24,3 +24,48 @@ class VirtualWorld:
 
         return
     
+
+    def __repr__(self):
+        """Define the string representation of this virtual world."""
+        REPR = ""
+
+        REPR += f"Primary Country           : {self.primary_actor_country}\n"
+        REPR += f"Target Number of Schedules: {self.TARGET_NUMBER_SCHEDULES}\n"
+        REPR += f"Depth Bound               : {self.DEPTH_BOUND}\n"
+        REPR += f"Maximum Frontier Size     : {self.MAX_FRONTIER_SIZE}\n"
+
+        REPR += "\n" + "*"*35 + "\n\n" + f"Initial World State:\n\n"
+        REPR += str(self.initial_state)
+
+        REPR += "*"*35 + "\n" + f"Transformation Templates:\n\n"
+
+        for t in self.transform_templates:
+            REPR += str(t)
+            REPR += "\n"
+        
+        return REPR
+    
+
+    def __str__(self):
+        """Define the string representation of this virtual world."""
+        STR = ""
+
+        STR += f"Primary Country           : {self.primary_actor_country}\n"
+        STR += f"Target Number of Schedules: {self.TARGET_NUMBER_SCHEDULES}\n"
+        STR += f"Depth Bound               : {self.DEPTH_BOUND}\n"
+        STR += f"Maximum Frontier Size     : {self.MAX_FRONTIER_SIZE}\n"
+
+        STR += "\n" + "*"*35 + "\n\n" + f"Initial World State:\n\n"
+        STR += str(self.initial_state)
+
+        STR += "\n" + "*"*35 + "\n\n" + f"Resource Weights:\n\n"
+        STR += str(self.resource_weights)
+
+        STR += "*"*35 + "\n" + f"Transformation Templates:\n\n"
+
+        for t in self.transform_templates:
+            STR += str(t)
+            STR += "\n"
+        
+        return STR
+    

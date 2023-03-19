@@ -29,7 +29,11 @@ class TransformTemplate:
         return
     
     def __repr__(self):
-        """Define the printed representation of this transform template."""
+        """Define the string representation of this transform template.
+        
+        Returns:
+        REPR -- the string representation of this class instance
+        """
         REPR = ""
 
         REPR += f"{self.transform_name}\n"
@@ -44,6 +48,28 @@ class TransformTemplate:
         REPR += "\n\n"
         
         return REPR
+    
+    
+    def __str__(self):
+        """Define the string representation of this transform template.
+        
+        Returns:
+        STR -- the string representation of this class instance
+        """
+        STR = ""
+
+        STR += f"{self.transform_name}\n"
+        STR += "-"*20 + "\n"
+        STR += "INPUTS\n"
+        for key, val in self.inputs.items():
+            STR += f"  {key}: {val}\n"
+        STR += "\n"
+        STR += "OUTPUTS\n"
+        for key, val in self.outputs.items():
+            STR += f"  {key}: {val}\n"
+        STR += "\n\n"
+        
+        return STR
     
 
     def _extract_resource_mapping_from_text(self, text_block):
