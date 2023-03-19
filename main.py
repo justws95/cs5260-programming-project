@@ -1,6 +1,7 @@
 """Main entry point for the program."""
 
-from util import load_initial_state_file, load_resources_file
+import os
+from util import load_initial_state_file, load_resources_file, parse_transform_template
 
 def country_scheduler(your_country_name, resources_filename,
 initial_state_filename, output_schedule_filename,
@@ -15,6 +16,23 @@ def init_simulation():
 
     world_state = load_initial_state_file(input_world_file)
     resource_weights = load_resources_file(input_resources_file)
+
+    # load transform templates
+    template_dir = './templates'
+    file_list = os.listdir(template_dir)
+
+    template_list = []
+
+    for f in file_list:
+        path_name = template_dir + "/" + f
+        template_list.append(path_name)
+
+
+    for template in template_list:
+        transform_template = parse_transform_template(template)
+        print(transform_template)
+
+
 
 
 if __name__ == "__main__":
