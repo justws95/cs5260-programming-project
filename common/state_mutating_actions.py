@@ -51,11 +51,13 @@ class Transfer:
 class Transform:
     """Models a transform of resources into other resources."""
 
-    def __init__(self, country, transform: TransformTemplate, scalar=1):
+    def __init__(self, country, transform: TransformTemplate, scalar=1, is_self=False):
         """Initialize an instance of a Transform."""
         self.country = country
         self.transform = transform
         self.scalar = scalar
+        self.is_self = is_self
+        self._name = 'self' if is_self else country
 
         return
     
@@ -66,7 +68,7 @@ class Transform:
         Returns:
         REPR -- the string representation of this class instance
         """
-        REPR = f"(TRANSFORM {self.country} (INPUTS"
+        REPR = f"(TRANSFORM {self._name} (INPUTS"
 
         inputs = self.transform.get_inputs_tuples_list()
 
@@ -91,7 +93,7 @@ class Transform:
         Returns:
         STR -- the string representation of this class instance
         """
-        STR = f"(TRANSFORM {self.country} (INPUTS"
+        STR = f"(TRANSFORM {self._name} (INPUTS"
 
         inputs = self.transform.get_inputs_tuples_list()
 

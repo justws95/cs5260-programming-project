@@ -3,7 +3,6 @@
 
 import math
 
-from sys import exit
 from .state_node import StateNode
 from .state_mutating_actions import Transform
 from .world_state import WorldState
@@ -92,40 +91,19 @@ class VirtualWorld:
         return solutions
     
 
-    def _build_child_transform_node(self, child_node_depth, transfer, transfer_scalar=1):
-        """Instantiate a StateNode instance representing a child state reached from a Transform action.
+    def _find_all_possible_transforms(self, current_self_state_dict, node: StateNode):
+        """Find all possible Transform actions that can be taken at a given node.
 
         Keyword arguments:
-        child_node_depth -- the depth of the child node in the search tree
-        transform -- the transform being performed
+        current_self_state_dict -- a Python dictionary of the resource state of the current 'self' country
+        node -- an instance of StateNode whose possible Transform are being searched
 
         Returns:
-        possible_child_states -- the possible states that can be reached from this node
+        transform_list -- a list of StateNodes containing all possible Transform actions that can be taken
         """
+        transform_list = []
 
-
-        return
-
-    def _find_possible_child_states_for_node(self, node: StateNode):
-        """Find all states that can be reached from this node via transforms or transfers.
-
-        Keyword arguments:
-        node -- the node whose possible child states are being examined
-
-        Returns:
-        possible_child_states -- the possible states that can be reached from this node
-        """
-        possible_child_states = []
-
-        # Get the current world state and the state of 'self' at this node
-        current_world_state_dict = node.world_state.get_world_dict()
-        current_self_state_dict = current_world_state_dict[self.primary_actor_country]
-
-        print(current_self_state_dict)
-
-        # Find all possible Transforms that can be performed.
         for t in self.transform_templates:
-            print(f"    {t.get_inputs_tuples_list()}")
             t_as_dict = {}
 
             for key, val in t.get_inputs_tuples_list():
@@ -142,31 +120,68 @@ class VirtualWorld:
             # The maximum Transform scalar is the minimum resource scalar
             max_scalar = min(scalar_dict.values())
 
-            print(f"Max scalar -> {max_scalar}")
-
             # Append each possible scalar multiple to the list of potential child states
             decrement = max_scalar
 
             while decrement > 0:
-                # Instantiate a Transform
-                transform_t = Transform(self.primary_actor_country, t, decrement)
-
-                # Update the world state
-                new_world_state = WorldState(isInitial=False, isClone=True, stateToClone=node.world_state)
-                new_world_state.update_world_state_with_transform(transform_t)
-
-                # Instantiate the StateNode of this potential child
-                child_state_node = StateNode(node.depth + 1, 
-                                             new_world_state, 
-                                             transform_t, 
-                                             is_root_node=False, 
-                                             parent=node)
+                # Instantiate a Transform and build the child node
+                transform_t = Transform(country=self.primary_actor_country, transform=t, scalar=decrement, is_self=True)
+                child_state_node = self._build_child_transform_node(parentNode=node, transform=transform_t, priorWorldState=node.world_state)
                 
                 # Push to list of possible children states
-                possible_child_states.append(child_state_node)
+                transform_list.append(child_state_node)
 
                 decrement -= 1
+
+        return transform_list
+    
+
+    def _build_child_transform_node(self, parentNode: StateNode, transform: Transform, priorWorldState: WorldState):
+        """Instantiate a StateNode instance representing a child state reached from a Transform action.
+
+        Keyword arguments:
+        parentNode -- an instance of StateNode that is the parent of this node
+        transform -- an instance of Transform representing a the transform performed
+        prior_world_state -- an instance of WorldState representing the world resource state before the transform
+
+        Returns:
+        child_state_node -- the possible child StateNode instance
+        """
+        new_world_state = WorldState(isInitial=False, isClone=True, stateToClone=priorWorldState)
+        new_world_state.update_world_state_with_transform(transform)
+
+        # Instantiate the StateNode of this potential child
+        child_state_node = StateNode(parentNode.depth + 1, new_world_state, transform, is_root_node=False, parent=parentNode)
+
+        print(child_state_node.action)
         
+        return child_state_node
+    
+
+    def _find_possible_child_states_for_node(self, node: StateNode):
+        """Find all states that can be reached from this node via transforms or transfers.
+
+        Keyword arguments:
+        node -- the node whose possible child states are being examined
+
+        Returns:
+        possible_child_states -- the possible states that can be reached from this node
+        """
+        possible_child_states = []
+
+        # Get the current world state and the state of 'self' at this node
+        current_world_state_dict = node.world_state.get_world_dict()
+        current_self_state_dict = current_world_state_dict[self.primary_actor_country]
+
+        # Find all possible child state_nodes that can arise from Transform actions
+        transform_child_states = self._find_all_possible_transforms(current_self_state_dict=current_self_state_dict, node=node)
+        possible_child_states.extend(transform_child_states)
+
+        # Find all possible child state_nodes that can arise from Transfer actions
+        #transfer_child_states = self._find_all_possible_transfers(current_self_state_dict=current_self_state_dict, node=node)
+        #possible_child_states.extend(transfer_child_states)
+
+
         node.set_child_states(possible_child_states)
 
         return possible_child_states
