@@ -1,20 +1,29 @@
 """Defines a WorldState object that models the world at a given state."""
 
 
-from .exceptions import IllegalInitialWorldStateError
+from __future__ import annotations
+from .exceptions import IllegalInitialWorldStateError, IllegalCloneWorldStateError
+from .state_mutating_actions import Transform
 
 
 
 class WorldState:
     """Model a simulated world at a given state."""
 
-    def __init__(self, isInitial=False, world_state_df=None):
+    def __init__(self, isInitial=False, world_state_df=None, isClone=False, stateToClone:'WorldState' =None):
         """Initialize a WorldState instance."""
         if isInitial:
             if world_state_df is None:
                 raise IllegalInitialWorldStateError
             
             self._instantiate_from_state_df(world_state_df)
+        elif isClone:
+            if stateToClone is None:
+                raise IllegalCloneWorldStateError
+            
+            self._countries = stateToClone.get_countries()
+            self._resources = stateToClone.get_resources()
+            self._world_dict = stateToClone.get_world_dict()
         else:
             self._countries = []
             self._resources = []
@@ -75,7 +84,7 @@ class WorldState:
 
             for resource in self.get_resources():
                 resource_amount = world_state_df.at[row, resource]
-                world_dict[country][resource] = resource_amount
+                world_dict[country][resource] = int(resource_amount)
 
         self.set_world_dict(world_dict=world_dict)
 
@@ -137,5 +146,31 @@ class WorldState:
         world_dict -- a Python dictionary representing the world state
         """
         self._world_dict = world_dict
+
+        return
+    
+    def update_world_state_with_transform(self, transform: Transform):
+        """Update the current world state to reflect a Transform action.
+
+        Keyword arguments:
+        transform -- an instance of Transform representing a transform that changes the world state
+        """
+        actor = transform.country
+        scalar = transform.scalar
+        inputs = transform.transform.get_inputs_tuples_list()
+        outputs = transform.transform.get_outputs_tuples_list()
+
+        # Get the dictionary of resources for the relevant actor
+        actor_dict = self._world_dict[actor]
+        # Update by subtracting the scalar multiple of the inputs
+        for key, val in inputs:
+            actor_dict[key] = int(actor_dict[key]) - (int(val) * scalar)
+
+        # Update by adding the scalar multiple of the outputs
+        for key, val in outputs:
+            actor_dict[key] = int(actor_dict[key]) + (int(val) * scalar)
+            
+        # Update the world state in the mapping
+        self._world_dict[actor] = actor_dict
 
         return

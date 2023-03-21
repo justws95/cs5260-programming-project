@@ -16,6 +16,21 @@ class IllegalInitialWorldStateError(Exception):
         return
     
 
+class IllegalCloneWorldStateError(Exception):
+    """Exception raised when a world state is instantiate with isClone=True but no state to clone is specified.
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    def __init__(self, message="A WorldState instance cannot be created with isClone=True without providing a state to clone with stateToClone arg."):
+        """Initialize an IllegalCloneWorldStateError instance."""
+        self.message = message
+        super().__init__(self.message)
+
+        return
+    
+
 class TemplateFileNotFoundError(Exception):
     """Exception raised when a transformation template file cannot be found at the specified path.
 

@@ -132,4 +132,32 @@ class TransformTemplate:
         output_list -- a list of all the transform outputs
         """
         return self.self._output_list
+    
+
+    def get_inputs_tuples_list(self):
+        """Get a list of tuples representing the inputs of a transform.
+
+        Returns:
+        inputs_tuple_list -- a list of tuples representing the inputs of a transform
+        """
+        inputs_tuple_list = []
+
+        for key, val in self.inputs.items():
+            inputs_tuple_list.append(tuple([key, val]))
+
+        return inputs_tuple_list
+        
+
+    def get_outputs_tuples_list(self):
+        """Get a list of tuples representing the outputs of a transform.
+
+        Returns:
+        outputs_tuple_list -- a list of tuples representing the outputs of a transform
+        """
+        outputs_tuple_list = []
+
+        for key, val in self.outputs.items():
+            outputs_tuple_list.append(tuple([key, val]))
+
+        return outputs_tuple_list
         
