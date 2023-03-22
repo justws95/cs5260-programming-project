@@ -1,9 +1,10 @@
 """Defines some utility functions to help with loading template files.
 
-Before writing these methods, I references the Piazza post by John Ford 
+Before writing this class, I referenced the Piazza post by John Ford 
 and was strongly influenced by the approach he took. I borrowed many concepts 
-and adapted them to fit my programming style. I want to give him the appropriate
-credit and link his post -> https://piazza.com/class/lbpfjbrwi0ca3/post/23.
+and adapted them to fit my design approach, chiefly his regex for parsing the template. 
+I want to give him the appropriate credit and link his post
+https://piazza.com/class/lbpfjbrwi0ca3/post/23.
 """
 
 

@@ -1,16 +1,8 @@
 """Defines a set of classes and utilities for describing actions which mutate world state."""
 
 
-from enum import Enum
 from .transformation_template import TransformTemplate
 
-
-
-class ActionType(Enum):
-    """Enum denoting the types of transactions available."""
-
-    TRANSFORM = "TRANSFORM"
-    TRANSFER = "TRANSFER"
 
 
 class Transfer:

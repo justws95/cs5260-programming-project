@@ -1,4 +1,11 @@
-"""Model representing a Transformation Template."""
+"""Model representing a Transformation Template.
+
+Before writing this class, I referenced the Piazza post by John Ford 
+and was strongly influenced by the approach he took. I borrowed many concepts 
+and adapted them to fit my design approach, chiefly his regex for parsing the template. 
+I want to give him the appropriate credit and link his post
+https://piazza.com/class/lbpfjbrwi0ca3/post/23.
+"""
 
 
 import re
