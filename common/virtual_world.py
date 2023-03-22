@@ -2,9 +2,10 @@
 
 
 import math
+import itertools
 
 from .state_node import StateNode
-from .state_mutating_actions import Transform
+from .state_mutating_actions import Transfer, Transform
 from .world_state import WorldState
 
 
@@ -81,7 +82,7 @@ class VirtualWorld:
     
 
     def get_solution_schedules(self):
-        """Get a list of solutions that have been found so far.
+        """Get a list of solutions that have been found.
 
         Returns:
         solutions -- a list of simulation solutions in the form of a list of lists of Transfers and Transforms
@@ -126,35 +127,107 @@ class VirtualWorld:
             while decrement > 0:
                 # Instantiate a Transform and build the child node
                 transform_t = Transform(country=self.primary_actor_country, transform=t, scalar=decrement, is_self=True)
-                child_state_node = self._build_child_transform_node(parentNode=node, transform=transform_t, priorWorldState=node.world_state)
+                child_state_node = self._build_child_transform_node(parent_node=node, transform=transform_t)
                 
                 # Push to list of possible children states
                 transform_list.append(child_state_node)
 
-                decrement -= 1
+                decrement = decrement - 1
 
         return transform_list
     
 
-    def _build_child_transform_node(self, parentNode: StateNode, transform: Transform, priorWorldState: WorldState):
+    def _build_child_transform_node(self, parent_node: StateNode, transform: Transform):
         """Instantiate a StateNode instance representing a child state reached from a Transform action.
 
         Keyword arguments:
-        parentNode -- an instance of StateNode that is the parent of this node
+        parent_node-- an instance of StateNode that is the parent of this node
         transform -- an instance of Transform representing a the transform performed
-        prior_world_state -- an instance of WorldState representing the world resource state before the transform
 
         Returns:
         child_state_node -- the possible child StateNode instance
         """
-        new_world_state = WorldState(isInitial=False, isClone=True, stateToClone=priorWorldState)
+        new_world_state = WorldState(isInitial=False, isClone=True, state_to_clone=parent_node.world_state)
         new_world_state.update_world_state_with_transform(transform)
 
         # Instantiate the StateNode of this potential child
-        child_state_node = StateNode(parentNode.depth + 1, new_world_state, transform, is_root_node=False, parent=parentNode)
+        child_state_node = StateNode(parent_node.depth + 1, new_world_state, transform, is_root_node=False, parent=parent_node)
 
-        print(child_state_node.action)
+        return child_state_node
+    
+
+    def _find_all_possible_transfers(self, node:StateNode):
+        """Initialize a simulation and a virtual world.
         
+        Parameters
+        --------------------
+        node : StateNode
+            the node whose possible Transfer child states are being determined
+        
+        Returns
+        --------------------
+        transfer_list: list[Transfer]
+            transfer_list -- a list of StateNodes containing all possible Transfer actions that can be taken
+        """
+        transfer_list = []
+
+        world_state = node.world_state.get_world_dict()
+        countries = node.world_state.get_countries()
+        resources = node.world_state.get_resources()
+        
+        # Find all permutations of countries and resources
+        country_pairs = [p for p in itertools.permutations(countries, 2)]
+
+        # Loop over each country pair and resource pair to find possible transfers
+        for cp in country_pairs:
+            giver = cp[0]
+            receiver = cp[1]
+            from_self = giver == self.primary_actor_country
+            to_self = receiver == self.primary_actor_country
+
+            for r in resources:
+                total_available = world_state[giver][r]
+
+                while total_available > 0:
+                    transfer_t = Transfer(from_country=giver, 
+                                          to_country=receiver, 
+                                          resource_name=r, 
+                                          amount=total_available,
+                                          from_is_self=from_self,
+                                          to_is_self=to_self)
+                    
+                    # Build a new child StateNode for this Transfer
+                    child_state_node = self._build_child_transfer_node(parent_node=node, transfer=transfer_t)
+
+                    # Push to list of possible children states
+                    transfer_list.append(child_state_node)
+
+                    total_available = total_available - 1
+
+        return transfer_list
+    
+
+    def _build_child_transfer_node(self, parent_node: StateNode, transfer: Transfer):
+        """Instantiate a StateNode instance representing a child state reached from a Transfer action.
+
+        Parameters
+        --------------------
+        parent_node : StateNode
+            an instance of StateNode that is the parent of this node
+        transfer : Transfer
+            an instance of Transfer representing a the transfer performed
+
+        Returns
+        --------------------
+        child_state_node : StateNode 
+            the possible child StateNode instance
+        """
+        new_world_state = WorldState(isInitial=False, isClone=True, state_to_clone=parent_node.world_state)
+        new_world_state.update_world_state_with_transfer(transfer)
+
+        # Instantiate the StateNode of this potential child
+        child_state_node = StateNode(parent_node.depth + 1, new_world_state, transfer, is_root_node=False, parent=parent_node)
+
         return child_state_node
     
 
@@ -177,10 +250,13 @@ class VirtualWorld:
         transform_child_states = self._find_all_possible_transforms(current_self_state_dict=current_self_state_dict, node=node)
         possible_child_states.extend(transform_child_states)
 
-        # Find all possible child state_nodes that can arise from Transfer actions
-        #transfer_child_states = self._find_all_possible_transfers(current_self_state_dict=current_self_state_dict, node=node)
-        #possible_child_states.extend(transfer_child_states)
+        print(f"Number of reachable Transform states -> {len(transform_child_states)}")
 
+        # Find all possible child state_nodes that can arise from Transfer actions
+        transfer_child_states = self._find_all_possible_transfers(node=node)
+        possible_child_states.extend(transfer_child_states)
+
+        print(f"Number of reachable Transform states -> {len(transfer_child_states)}")
 
         node.set_child_states(possible_child_states)
 
@@ -209,7 +285,7 @@ class VirtualWorld:
             #while num_schedules_found < self.TARGET_NUMBER_SCHEDULES:
             #    continue
             print("Finding possible child states")
-            self._find_possible_child_states_for_node(root)
+            child_states = self._find_possible_child_states_for_node(root)
 
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c

@@ -3,14 +3,14 @@
 
 from __future__ import annotations
 from .exceptions import IllegalInitialWorldStateError, IllegalCloneWorldStateError
-from .state_mutating_actions import Transform
+from .state_mutating_actions import Transfer, Transform
 
 
 
 class WorldState:
     """Model a simulated world at a given state."""
 
-    def __init__(self, isInitial=False, world_state_df=None, isClone=False, stateToClone:'WorldState' =None):
+    def __init__(self, isInitial=False, world_state_df=None, isClone=False, state_to_clone:'WorldState' =None):
         """Initialize a WorldState instance."""
         if isInitial:
             if world_state_df is None:
@@ -18,12 +18,12 @@ class WorldState:
             
             self._instantiate_from_state_df(world_state_df)
         elif isClone:
-            if stateToClone is None:
+            if state_to_clone is None:
                 raise IllegalCloneWorldStateError
             
-            self._countries = stateToClone.get_countries()
-            self._resources = stateToClone.get_resources()
-            self._world_dict = stateToClone.get_world_dict()
+            self._countries = list(state_to_clone.get_countries())
+            self._resources = list(state_to_clone.get_resources())
+            self._world_dict = dict(state_to_clone.get_world_dict())
         else:
             self._countries = []
             self._resources = []
@@ -89,6 +89,11 @@ class WorldState:
         self.set_world_dict(world_dict=world_dict)
 
         return
+    
+    
+    def _validate_load_from_files(self):
+        """Validate that resources defined in resource file match those in state file. Throw Error if otherwise."""
+        pass
 
     
     def get_countries(self):
@@ -97,7 +102,7 @@ class WorldState:
         Returns:
         countries -- a list of all the countries in this world
         """
-        return self._countries
+        return list(self._countries)
     
 
     def set_countries(self, country_list):
@@ -106,7 +111,7 @@ class WorldState:
         Keyword arguments:
         country_list -- a list of all the countries for this world state
         """
-        self._countries = country_list
+        self._countries = list(country_list)
 
         return
     
@@ -117,7 +122,7 @@ class WorldState:
         Returns:
         resources -- a list of all the resources in this world
         """
-        return self._resources
+        return list(self._resources)
     
 
     def set_resources(self, resource_list):
@@ -126,7 +131,7 @@ class WorldState:
         Keyword arguments:
         resource_list -- a list of all the resources for this world state
         """
-        self._resources = resource_list
+        self._resources = list(resource_list)
 
         return
     
@@ -136,7 +141,7 @@ class WorldState:
         Returns:
         world_dict -- a Python dictionary representing the world state
         """
-        return self._world_dict
+        return dict(self._world_dict)
     
 
     def set_world_dict(self, world_dict):
@@ -145,7 +150,7 @@ class WorldState:
         Keyword arguments:
         world_dict -- a Python dictionary representing the world state
         """
-        self._world_dict = world_dict
+        self._world_dict = dict(world_dict)
 
         return
     
@@ -161,7 +166,7 @@ class WorldState:
         outputs = transform.transform.get_outputs_tuples_list()
 
         # Get the dictionary of resources for the relevant actor
-        actor_dict = self._world_dict[actor]
+        actor_dict = dict(self._world_dict[actor])
         # Update by subtracting the scalar multiple of the inputs
         for key, val in inputs:
             actor_dict[key] = int(actor_dict[key]) - (int(val) * scalar)
@@ -171,6 +176,27 @@ class WorldState:
             actor_dict[key] = int(actor_dict[key]) + (int(val) * scalar)
             
         # Update the world state in the mapping
-        self._world_dict[actor] = actor_dict
+        self._world_dict[actor] = dict(actor_dict)
+
+        return
+    
+
+    def update_world_state_with_transfer(self, transfer: Transfer):
+        """Update the current world state to reflect a Transfer action.
+
+        Keyword arguments:
+        transfer -- an instance of Transfer representing a transform that changes the world state
+        """
+        giver = transfer.from_country
+        receiver = transfer.to_country
+        resource = transfer.resource
+        amount = transfer.amount
+
+        new_world_state = dict(self._world_dict)
+
+        new_world_state[giver][resource] -= amount
+        new_world_state[receiver][resource] += amount
+
+        self.set_world_dict(new_world_state)
 
         return

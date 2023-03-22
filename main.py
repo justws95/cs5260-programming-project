@@ -22,7 +22,7 @@ def country_scheduler(your_country_name,
         target_number_of_schedules=num_output_schedules, 
         depth_bound=depth_bound, frontier_max_size=frontier_max_size)
     
-    print(virtual_world)
+    #print(virtual_world)
 
     print("\n\n\n\n\n\n\n\n\n")
     print("Running the simulation....")
@@ -39,16 +39,25 @@ def init_simulation(primary_country_actor,
     frontier_max_size):
     """Initialize a simulation and a virtual world.
         
-    Keyword arguments:
-    primary_country_actor -- the name of the country that is the primary actor of the simulation
-    resource_file_name -- the file path of the resource weights file
-    initial_state_file_name -- the file path to the initial world state file
-    target_number_of_schedules -- the targeted number of schedules to be generated
-    depth_bound -- the maximum depth of traversal for the search
-    frontier_max_size -- the maximum size the search frontier can take on
+    Parameters
+    --------------------
+    primary_country_actor : str 
+        the name of the country that is the primary actor of the simulation
+    resource_file_name : str
+        the file path of the resource weights file
+    initial_state_file_name :str
+        the file path to the initial world state file
+    target_number_of_schedules : str
+        the targeted number of schedules to be generated
+    depth_bound : int
+        the maximum depth of traversal for the search
+    frontier_max_size : int
+        the maximum size the search frontier can take on
 
-    Returns:
-    virtual_world -- an instance of VirtualWorld representing the world being simulated
+    Returns
+    --------------------
+    virtual_world : VirtualWorld 
+        an instance of VirtualWorld representing the world being simulated
     """
     # Load the initial world and resource files into memory
     world_state = load_initial_state_file(initial_state_file_name)

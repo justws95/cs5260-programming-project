@@ -16,12 +16,14 @@ class ActionType(Enum):
 class Transfer:
     """Models a transfer of resources between 2 countries."""
 
-    def __init__(self, from_country, to_country, resource_name, amount):
+    def __init__(self, from_country, to_country, resource_name, amount, from_is_self=False, to_is_self=False):
         """Initialize an instance of a Transfer."""
         self.from_country = from_country
         self.to_country = to_country
         self.resource = resource_name
         self.amount = amount
+        self._from_is_self = from_is_self
+        self._to_is_self = to_is_self
 
         return
     
@@ -32,7 +34,8 @@ class Transfer:
         Returns:
         REPR -- the string representation of this class instance
         """
-        REPR = f"(TRANSFER {self.from_country} {self.to_country} (({self.resource} {self.amount})))"
+        REPR = f"(TRANSFER {self.from_country if not self._from_is_self else 'self'} "
+        REPR += f"{self.to_country if not self._to_is_self else 'self'} (({self.resource} {self.amount})))"
 
         return REPR
     
@@ -43,7 +46,9 @@ class Transfer:
         Returns:
         STR -- the string representation of this class instance
         """
-        STR = f"(TRANSFER {self.from_country} {self.to_country} (({self.resource} {self.amount})))"
+        STR = f"(TRANSFER {self.from_country if not self._from_is_self else 'self'} "
+        STR += f"{self.to_country if not self._to_is_self else 'self'} (({self.resource} {self.amount})))"
+
 
         return STR
     
