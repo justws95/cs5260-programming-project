@@ -2,6 +2,7 @@
 
 
 import math
+import random
 import itertools
 
 from .state_node import StateNode
@@ -32,6 +33,12 @@ class VirtualWorld:
         self.MAX_FRONTIER_SIZE = frontier_size_limit
 
         self._schedules = []
+
+        # HYPERPARAMETERS
+        self._max_transform_scalar = 1#0.85
+        self._max_transfer_scalar = 1#0.33
+        self._random_possible_next_state_scalar = 1#0.20
+
 
         return
     
@@ -121,8 +128,8 @@ class VirtualWorld:
             # The maximum Transform scalar is the minimum resource scalar
             max_scalar = min(scalar_dict.values())
 
-            # Append each possible scalar multiple to the list of potential child states
-            decrement = max_scalar
+            # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
+            decrement = math.floor(max_scalar * self._max_transform_scalar)
 
             while decrement > 0:
                 # Instantiate a Transform and build the child node
@@ -178,6 +185,9 @@ class VirtualWorld:
         # Find all permutations of countries and resources
         country_pairs = [p for p in itertools.permutations(countries, 2)]
 
+        # Filter out transfers that don't involve the primary actor 'self'
+        country_pairs = list(filter(lambda cp: cp[0] == self.primary_actor_country or cp[1] == self.primary_actor_country, country_pairs)) 
+
         # Loop over each country pair and resource pair to find possible transfers
         for cp in country_pairs:
             giver = cp[0]
@@ -188,11 +198,15 @@ class VirtualWorld:
             for r in resources:
                 total_available = world_state[giver][r]
 
-                while total_available > 0:
+                # Scale total_available with the hyperparameter setting
+                scaled_total_available = math.floor(total_available * self._max_transfer_scalar)
+
+                # Determine all possible possible Transfers
+                while scaled_total_available > 0:
                     transfer_t = Transfer(from_country=giver, 
                                           to_country=receiver, 
                                           resource_name=r, 
-                                          amount=total_available,
+                                          amount=scaled_total_available,
                                           from_is_self=from_self,
                                           to_is_self=to_self)
                     
@@ -202,7 +216,7 @@ class VirtualWorld:
                     # Push to list of possible children states
                     transfer_list.append(child_state_node)
 
-                    total_available = total_available - 1
+                    scaled_total_available  = scaled_total_available  - 1
 
         return transfer_list
     
@@ -250,13 +264,9 @@ class VirtualWorld:
         transform_child_states = self._find_all_possible_transforms(current_self_state_dict=current_self_state_dict, node=node)
         possible_child_states.extend(transform_child_states)
 
-        print(f"Number of reachable Transform states -> {len(transform_child_states)}")
-
         # Find all possible child state_nodes that can arise from Transfer actions
         transfer_child_states = self._find_all_possible_transfers(node=node)
         possible_child_states.extend(transfer_child_states)
-
-        print(f"Number of reachable Transform states -> {len(transfer_child_states)}")
 
         node.set_child_states(possible_child_states)
 
@@ -281,11 +291,20 @@ class VirtualWorld:
             is found or the user halts execution with Ctrl-c.
         """
         try:
-            
+            node = root
             #while num_schedules_found < self.TARGET_NUMBER_SCHEDULES:
             #    continue
+            # Find all possible child states that can be entered
             print("Finding possible child states")
-            child_states = self._find_possible_child_states_for_node(root)
+            self._find_possible_child_states_for_node(node)
+
+            # Take a random sample of these states to explore
+            states_to_explore = node.get_child_states()
+            print(f"Total children -> {len(states_to_explore)}")
+
+            random_selection = random.sample(states_to_explore, math.floor(len(states_to_explore) * self._random_possible_next_state_scalar))
+
+            print(f"Number in random selection -> {len(random_selection)}")
 
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c

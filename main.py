@@ -63,6 +63,9 @@ def init_simulation(primary_country_actor,
     world_state = load_initial_state_file(initial_state_file_name)
     resource_weights = load_resources_file(resource_file_name)
 
+    print("INITIAL WORLD STATE")
+    print(world_state)
+
     # Load transform templates
     template_dir = './templates'
     file_list = os.listdir(template_dir)
@@ -99,7 +102,7 @@ if __name__ == "__main__":
     DEFAULT_OUTPUT_SCHEDULE_FILE = "./simulation_output/output.txt"
     DEFAULT_NUM_SCHEDULES = 1
     DEFAULT_DEPTH_BOUND = 3
-    DEFAULT_FRONTIER_SIZE = 5
+    DEFAULT_FRONTIER_SIZE = 50
 
     print("Calling Country Scheduler")
     country_scheduler(

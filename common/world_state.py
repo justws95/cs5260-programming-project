@@ -2,6 +2,7 @@
 
 
 from __future__ import annotations
+from copy import deepcopy
 from .exceptions import IllegalInitialWorldStateError, IllegalCloneWorldStateError
 from .state_mutating_actions import Transfer, Transform
 
@@ -21,9 +22,9 @@ class WorldState:
             if state_to_clone is None:
                 raise IllegalCloneWorldStateError
             
-            self._countries = list(state_to_clone.get_countries())
-            self._resources = list(state_to_clone.get_resources())
-            self._world_dict = dict(state_to_clone.get_world_dict())
+            self._countries = deepcopy(state_to_clone.get_countries())
+            self._resources = deepcopy(state_to_clone.get_resources())
+            self._world_dict = deepcopy(state_to_clone.get_world_dict())
         else:
             self._countries = []
             self._resources = []
@@ -102,7 +103,9 @@ class WorldState:
         Returns:
         countries -- a list of all the countries in this world
         """
-        return list(self._countries)
+        countries = deepcopy(self._countries)
+
+        return countries
     
 
     def set_countries(self, country_list):
@@ -111,7 +114,7 @@ class WorldState:
         Keyword arguments:
         country_list -- a list of all the countries for this world state
         """
-        self._countries = list(country_list)
+        self._countries = deepcopy(country_list)
 
         return
     
@@ -122,7 +125,9 @@ class WorldState:
         Returns:
         resources -- a list of all the resources in this world
         """
-        return list(self._resources)
+        resources = deepcopy(self._resources)
+
+        return resources
     
 
     def set_resources(self, resource_list):
@@ -131,7 +136,7 @@ class WorldState:
         Keyword arguments:
         resource_list -- a list of all the resources for this world state
         """
-        self._resources = list(resource_list)
+        self._resources = deepcopy(resource_list)
 
         return
     
@@ -141,7 +146,7 @@ class WorldState:
         Returns:
         world_dict -- a Python dictionary representing the world state
         """
-        return dict(self._world_dict)
+        return deepcopy(self._world_dict)
     
 
     def set_world_dict(self, world_dict):
@@ -150,7 +155,7 @@ class WorldState:
         Keyword arguments:
         world_dict -- a Python dictionary representing the world state
         """
-        self._world_dict = dict(world_dict)
+        self._world_dict = deepcopy(world_dict)
 
         return
     
@@ -166,7 +171,8 @@ class WorldState:
         outputs = transform.transform.get_outputs_tuples_list()
 
         # Get the dictionary of resources for the relevant actor
-        actor_dict = dict(self._world_dict[actor])
+        actor_dict = deepcopy(self._world_dict[actor])
+        
         # Update by subtracting the scalar multiple of the inputs
         for key, val in inputs:
             actor_dict[key] = int(actor_dict[key]) - (int(val) * scalar)
@@ -176,7 +182,7 @@ class WorldState:
             actor_dict[key] = int(actor_dict[key]) + (int(val) * scalar)
             
         # Update the world state in the mapping
-        self._world_dict[actor] = dict(actor_dict)
+        self._world_dict[actor] = deepcopy(actor_dict)
 
         return
     
@@ -192,11 +198,11 @@ class WorldState:
         resource = transfer.resource
         amount = transfer.amount
 
-        new_world_state = dict(self._world_dict)
-
+        new_world_state = deepcopy(self._world_dict)
+        
         new_world_state[giver][resource] -= amount
         new_world_state[receiver][resource] += amount
 
-        self.set_world_dict(new_world_state)
+        self._world_dict = deepcopy(new_world_state)
 
         return
