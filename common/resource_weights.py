@@ -82,3 +82,15 @@ class ResourceWeights:
         weight = float(self._weights_dict[resource_name])
 
         return weight
+    
+    def get_resource_names(self):
+        """Retrieve the resource names present in the weights file.
+        
+        Returns
+        --------------------
+        resources : list[str]
+            A list of resource names
+        """
+        resources = list(self._weights_dict.keys())
+
+        return resources

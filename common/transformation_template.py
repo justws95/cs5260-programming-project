@@ -129,7 +129,7 @@ class TransformTemplate:
         Returns:
         input_list -- a list of all the transform inputs
         """
-        return self._input_list
+        return list(self._input_list)
         
 
     def get_outputs_list(self):
@@ -138,7 +138,7 @@ class TransformTemplate:
         Returns:
         output_list -- a list of all the transform outputs
         """
-        return self.self._output_list
+        return list(self._output_list)
     
 
     def get_inputs_tuples_list(self):

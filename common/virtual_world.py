@@ -28,6 +28,7 @@ class VirtualWorld:
         """Initialize a VirtualWorld instance."""
         self.initial_state = initial_state
         self.resource_weights = resource_weights
+        self.valid_resource_names = resource_weights.get_resource_names()
         self.transform_templates = transform_templates
         self.primary_actor_country = self_country_name
         
@@ -37,6 +38,8 @@ class VirtualWorld:
 
         self._schedules = []
         self._simulation_root_node = None
+        self._set_all_derived_resources = False
+        self._derived_resources = [] 
 
         # HYPERPARAMETERS
         self._MIN_TRANSFORM_SCALAR = 0.15
@@ -44,7 +47,7 @@ class VirtualWorld:
         self._MAX_TRANSFER_SCALAR = 0.33
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.25
         self._REWARD_DISCOUNT_GAMMA = 0.05
-        self._TRANSFORM_SUCCESS_PROBABILITY = 0.975
+        self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
         self._SCHEDULE_FAILURE_REWARD = -1.5
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
@@ -209,6 +212,30 @@ class VirtualWorld:
         transform_list = []
 
         for t in self.transform_templates:
+            # Add catch for templates that don't exist in this world
+            transform_resources = []
+            skip_transform = False
+
+            for i in t.get_inputs_list():
+                transform_resources.append(i)
+            for o in t.get_outputs_list():
+                transform_resources.append(o)
+
+            # Find derived resources if they have not already been found
+            if not self._set_all_derived_resources:
+                derived_list = [x for x in t.get_outputs_list() if x not in t.get_inputs_list() and x.find('Waste') == -1]
+                for d in derived_list:
+                    if d not in self._derived_resources:
+                        self._derived_resources.append(d)
+
+            for tr in transform_resources:
+                if tr not in self.valid_resource_names:
+                    skip_transform = True
+            
+            if skip_transform:
+                continue
+            
+            # Find all possible transforms
             t_as_dict = {}
 
             for key, val in t.get_inputs_tuples_list():
@@ -241,7 +268,10 @@ class VirtualWorld:
                 transform_list.append(child_state_node)
 
                 decrement = decrement - 1
-
+        
+        # Set the flag to no longer search for derived resources
+        self._set_all_derived_resources = True
+        
         return transform_list
     
 
