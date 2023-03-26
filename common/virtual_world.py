@@ -33,11 +33,14 @@ class VirtualWorld:
         self.MAX_FRONTIER_SIZE = frontier_size_limit
 
         self._schedules = []
+        self._simulation_root_node = None
 
         # HYPERPARAMETERS
-        self._max_transform_scalar = 0.75
-        self._max_transfer_scalar = 0.33
-        self._random_possible_next_state_scalar = 0.25
+        self._MAX_TRANSFORM_SCALAR = 0.75
+        self._MAX_TRANSFER_SCALAR = 0.33
+        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.25
+        self._REWARD_DISCOUNT_GAMMA = 0.05
+        self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
 
         return
     
@@ -87,7 +90,7 @@ class VirtualWorld:
         return STR
     
 
-    def _state_quality_function(self, state: StateNode):
+    def _apply_state_quality_function(self, state: StateNode):
         """Calculate the state quality for a given StateNode.
         
         Per the description in the project write up I started with the following State Quality Function:
@@ -110,7 +113,7 @@ class VirtualWorld:
         state_quality = 0
 
         # Initial proportionality constants NOTE: These will need to eventually be reexamined
-        PROPORTIONALITY_CONSTANTS ={
+        PROPORTIONALITY_CONSTANTS = {
             'Housing' : 0.5,
         }
 
@@ -120,7 +123,6 @@ class VirtualWorld:
         population = primary_actor_state['Population']
 
         # Calculate the state quality by iterating over the resources
-        print("\n" + "-"*40 + "\n")
         for resource, amount in primary_actor_state.items():
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
@@ -129,7 +131,10 @@ class VirtualWorld:
             impact = (weight * proportionality_constant * amount) / population
             state_quality += impact
 
-        return
+        # Set the value in the StateNode instance
+        state._state_quality = state_quality
+
+        return state_quality 
     
 
     def get_solution_schedules(self):
@@ -173,7 +178,7 @@ class VirtualWorld:
             max_scalar = min(scalar_dict.values())
 
             # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
-            decrement = math.floor(max_scalar * self._max_transform_scalar)
+            decrement = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
 
             while decrement > 0:
                 # Instantiate a Transform and build the child node
@@ -243,7 +248,7 @@ class VirtualWorld:
                 total_available = world_state[giver][r]
 
                 # Scale total_available with the hyperparameter setting
-                scaled_total_available = math.floor(total_available * self._max_transfer_scalar)
+                scaled_total_available = math.floor(total_available * self._MAX_TRANSFER_SCALAR)
 
                 # Determine all possible possible Transfers
                 while scaled_total_available > 0:
@@ -317,25 +322,108 @@ class VirtualWorld:
         return possible_child_states
     
 
-    def _calculate_undiscounted_reward_of_children(self, state_list: list):
-        """Calculate the undiscounted reward of each possible child state.
+    def _calculate_undiscounted_reward(self, state_node: StateNode):
+        """Calculate the undiscounted reward of a StateNode.
 
         Parameters
         --------------------
-        state_list : list[StateNode]
-            the list of StateNodes to be scored
+        state_node : StateNode
+            The StateNode to calculate the undiscounted reward  from
+
+        Returns
+        --------------------
+        undiscounted_reward : float 
+            The undiscounted reward of this StateNode
         """
-        print("Mapping undiscounted reward")
-        quality_list = []#[self._state_quality_function(i) for i in state_list]
+        undiscounted_reward = state_node._state_quality - state_node.parent._state_quality 
+        state_node._undiscounted_reward = undiscounted_reward
 
-        quality_list.append(self._state_quality_function(state_list[0]))
+        return undiscounted_reward
+    
 
-        print(quality_list)
-        
+    def _calculate_discounted_reward(self, state_node: StateNode):
+        """Calculate the discounted reward of a StateNode.
 
+        Parameters
+        --------------------
+        state_node : StateNode
+            The StateNode to calculate the discounted reward  from
 
+        Returns
+        --------------------
+        discounted_reward : float 
+            The discounted reward of this StateNode
+        """
+        discounted_reward = self._REWARD_DISCOUNT_GAMMA * state_node._undiscounted_reward
+        state_node._discounted_reward = discounted_reward
 
-        return
+        return discounted_reward
+    
+
+    def _calculate_expected_utility_of_transform_state_node(self, state_node: StateNode):
+        """Calculate the expected utility for a Transform type StateNode.
+
+        Parameters
+        --------------------
+        state_node : StateNode
+            The StateNode to calculate the expected utility for
+
+        Returns
+        --------------------
+        expected_utility: float 
+            The expected utility of this StateNode
+        """
+        expected_utility = state_node._discounted_reward * self._TRANSFORM_SUCCESS_PROBABILITY
+        state_node._expected_utility= expected_utility
+
+        return expected_utility
+    
+
+    def _calculate_expected_utility_of_transfer_state_node(self, state_node: StateNode):
+        """Calculate the expected utility for a Transfer type StateNode.
+
+        Parameters
+        --------------------
+        state_node : StateNode
+            The StateNode to calculate the expected utility for
+
+        Returns
+        --------------------
+        expected_utility: float 
+            The expected utility of this StateNode
+        """
+        expected_utility = state_node._discounted_reward * self._TRANSFORM_SUCCESS_PROBABILITY
+        state_node._expected_utility= expected_utility
+
+        return expected_utility
+    
+
+    def _calculate_expected_utility(self, state_node: StateNode):
+        """Calculate the expected utility of a StateNode.
+
+        Parameters
+        --------------------
+        state_node : StateNode
+            The StateNode to calculate the expected utility from
+        """
+        # Get the state quality of each child state
+        self._apply_state_quality_function(state_node)
+
+        # Calculate the undiscounted reward of each child state
+        self._calculate_undiscounted_reward(state_node)
+
+        # Calculate the discounted reward of each child state
+        self._calculate_discounted_reward(state_node)
+
+        # Finally, calculate the expected utility
+        if isinstance(state_node.action, Transfer):
+            self._calculate_expected_utility_of_transfer_state_node(state_node)
+        elif isinstance(state_node.action, Transform):
+            self._calculate_expected_utility_of_transform_state_node(state_node)
+        else:
+            print("This is a something else....")
+
+        return state_node._expected_utility
 
     
     def run_simulation(self):
@@ -351,12 +439,18 @@ class VirtualWorld:
                 action=None, 
                 parent=None)
         
+        self._simulation_root_node = root
+        
         """
             Search for schedule solutions until either the target number of schedules
             is found or the user halts execution with Ctrl-c.
         """
         try:
             node = root
+
+            # Calculate Expected Utility for starting state
+            self._apply_state_quality_function(root)
+
             #while num_schedules_found < self.TARGET_NUMBER_SCHEDULES:
             #    continue
             # Find all possible child states that can be entered
@@ -367,26 +461,13 @@ class VirtualWorld:
             states_to_explore = node.get_child_states()
             print(f"Total children -> {len(states_to_explore)}")
 
-            # Calculate the undiscounted reward of each state
-            self._calculate_undiscounted_reward_of_children(state_list=states_to_explore)
+            # Calculate the expected utility of each state
+            for state in states_to_explore:
+                self._calculate_expected_utility(state_node=state)
 
-            """
-            random_selection = random.sample(states_to_explore, math.floor(len(states_to_explore) * self._random_possible_next_state_scalar))
 
-            print(f"Number in random selection -> {len(random_selection)}")
 
-            # Level 2
-            choice = random.choice(random_selection)
 
-            self._find_possible_child_states_for_node(choice)
-
-            states_to_explore_2 = choice.get_child_states()
-            print(f"Total children  2-> {len(states_to_explore_2)}")
-
-            random_selection_2 = random.sample(states_to_explore_2, math.floor(len(states_to_explore_2) * self._random_possible_next_state_scalar))
-
-            print(f"Number in random selection 2 -> {len(random_selection_2 )}")
-            """
 
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
