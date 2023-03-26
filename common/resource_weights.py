@@ -21,6 +21,8 @@ class ResourceWeights:
         """
         STR = ""
 
+        STR += "\n" + "*"*35 + "\n\n" + f"Resource Weights:\n\n"
+
         for key, val in self._weights_dict.items():
             STR += f"  {key}: {val}\n"
 
@@ -63,3 +65,20 @@ class ResourceWeights:
 
         return
     
+
+    def get_weight_for_resource(self, resource_name: str):
+        """Retrieve the relative weight for a resource.
+        
+        Parameters
+        --------------------
+        resource_name: str
+            The resource being fetched
+        
+        Returns
+        --------------------
+        weight: float
+            A float representing the relative weight for this resource
+        """
+        weight = float(self._weights_dict[resource_name])
+
+        return weight

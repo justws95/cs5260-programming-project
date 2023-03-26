@@ -35,10 +35,9 @@ class VirtualWorld:
         self._schedules = []
 
         # HYPERPARAMETERS
-        self._max_transform_scalar = 1#0.85
-        self._max_transfer_scalar = 1#0.33
-        self._random_possible_next_state_scalar = 1#0.20
-
+        self._max_transform_scalar = 0.75
+        self._max_transfer_scalar = 0.33
+        self._random_possible_next_state_scalar = 0.25
 
         return
     
@@ -86,6 +85,51 @@ class VirtualWorld:
             STR += "\n"
         
         return STR
+    
+
+    def _state_quality_function(self, state: StateNode):
+        """Calculate the state quality for a given StateNode.
+        
+        Per the description in the project write up I started with the following State Quality Function:
+
+        Weighted sum of resource factors, normalized by the population resource, such as wRi ∗ cRi ∗ ARi /APopulation, 
+        where A Ri is the amount of a resource, and c Ri is a proportionality constant (e.g., 2 units food 
+        per person, 0.5 houses per person). The proportionality constant is taken from the resource weights initially
+        read in during program initialization.
+        
+        Parameters
+        --------------------
+        node : StateNode
+            the node whose possible Transfer child states are being determined
+        
+        Returns
+        --------------------
+        state_quality: float
+            A float representing the computed state quality
+        """
+        state_quality = 0
+
+        # Initial proportionality constants NOTE: These will need to eventually be reexamined
+        PROPORTIONALITY_CONSTANTS ={
+            'Housing' : 0.5,
+        }
+
+        # Get the resource dictionary for 'self'
+        world_state_dict_for_node = state.world_state.get_world_dict()
+        primary_actor_state = world_state_dict_for_node[self.primary_actor_country]
+        population = primary_actor_state['Population']
+
+        # Calculate the state quality by iterating over the resources
+        print("\n" + "-"*40 + "\n")
+        for resource, amount in primary_actor_state.items():
+            weight = self.resource_weights.get_weight_for_resource(resource)
+            proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
+            
+
+            impact = (weight * proportionality_constant * amount) / population
+            state_quality += impact
+
+        return
     
 
     def get_solution_schedules(self):
@@ -169,12 +213,12 @@ class VirtualWorld:
         Parameters
         --------------------
         node : StateNode
-            the node whose possible Transfer child states are being determined
+            The node whose possible Transfer child states are being determined
         
         Returns
         --------------------
         transfer_list: list[Transfer]
-            transfer_list -- a list of StateNodes containing all possible Transfer actions that can be taken
+            A list of StateNodes containing all possible Transfer actions that can be taken
         """
         transfer_list = []
 
@@ -271,6 +315,27 @@ class VirtualWorld:
         node.set_child_states(possible_child_states)
 
         return possible_child_states
+    
+
+    def _calculate_undiscounted_reward_of_children(self, state_list: list):
+        """Calculate the undiscounted reward of each possible child state.
+
+        Parameters
+        --------------------
+        state_list : list[StateNode]
+            the list of StateNodes to be scored
+        """
+        print("Mapping undiscounted reward")
+        quality_list = []#[self._state_quality_function(i) for i in state_list]
+
+        quality_list.append(self._state_quality_function(state_list[0]))
+
+        print(quality_list)
+        
+
+
+
+        return
 
     
     def run_simulation(self):
@@ -302,9 +367,26 @@ class VirtualWorld:
             states_to_explore = node.get_child_states()
             print(f"Total children -> {len(states_to_explore)}")
 
+            # Calculate the undiscounted reward of each state
+            self._calculate_undiscounted_reward_of_children(state_list=states_to_explore)
+
+            """
             random_selection = random.sample(states_to_explore, math.floor(len(states_to_explore) * self._random_possible_next_state_scalar))
 
             print(f"Number in random selection -> {len(random_selection)}")
+
+            # Level 2
+            choice = random.choice(random_selection)
+
+            self._find_possible_child_states_for_node(choice)
+
+            states_to_explore_2 = choice.get_child_states()
+            print(f"Total children  2-> {len(states_to_explore_2)}")
+
+            random_selection_2 = random.sample(states_to_explore_2, math.floor(len(states_to_explore_2) * self._random_possible_next_state_scalar))
+
+            print(f"Number in random selection 2 -> {len(random_selection_2 )}")
+            """
 
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c

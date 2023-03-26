@@ -11,6 +11,7 @@ class StateNode:
         self.action = action
 
         self._possible_child_states = []
+        self._undiscounted_reward = None
         self._expected_utility = None
 
         if not is_root_node and parent is None:
