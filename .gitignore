@@ -131,3 +131,7 @@ dmypy.json
 # VsCode editor files
 .vscode
 .vscode/
+
+# Simulation output files
+simulation_output
+simulation_output/

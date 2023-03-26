@@ -271,7 +271,7 @@ class VirtualWorld:
         
         # Set the flag to no longer search for derived resources
         self._set_all_derived_resources = True
-        
+
         return transform_list
     
 
@@ -583,22 +583,19 @@ class VirtualWorld:
 
         Returns
         --------------------
-        actions: list[StateNodes]
+        schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
-        actions = []
+        schedule = []
 
         while node != self._simulation_root_node:
-            actions.append(node.action)
+            schedule.append(node)
             node = node.parent
 
         # Reverse the list to appear in chronological order
-        actions.reverse()
+        schedule.reverse()
 
-        for action in actions:
-            print(f"{action}")
-
-        return actions
+        return schedule
 
 
     def _recursively_search_for_schedules(self, node: StateNode, frontier: list):
@@ -613,16 +610,14 @@ class VirtualWorld:
 
         Returns
         --------------------
-        schedule: list[StateNodes]
+        schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
-        print(f"Current Depth -> {node.depth}")
         schedule = []
 
         # Check if base case (i.e. Targeted Depth) has been reached
         if node.depth >= self.DEPTH_BOUND:
-            print("Target depth reached")
-            self._get_schedule_from_state_node_and_parents(node)
+            schedule = self._get_schedule_from_state_node_and_parents(node)
             return schedule
 
         self._find_possible_child_states_for_node(node)
@@ -648,10 +643,9 @@ class VirtualWorld:
         best_next_state_node = best_next_state[1]
 
         # Recursively search
-        self._recursively_search_for_schedules(best_next_state_node, frontier=[])
+        schedule = self._recursively_search_for_schedules(best_next_state_node, frontier=[])
 
-        # Default case, should never be reached in normal execution
-        return "DEFAULT CASE REACHED"
+        return schedule
     
     def run_simulation(self):
         """Run the simulation to find solution schedules."""
@@ -676,10 +670,22 @@ class VirtualWorld:
                 frontier = []
                 schedule = self._recursively_search_for_schedules(root, frontier=frontier)
                 self._schedules.append(schedule)
+                print(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
                 frontier.clear()
-
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
             print("User has halted simulation execution early.")
 
         return
+    
+    def get_simulation_schedules(self):
+        """Fetch the schedules that were found during the simulation.
+
+        Returns
+        --------------------
+        schedules : list[StateNodes]
+            A list of StateNodes representing the schedules the simulation found
+        """
+        schedules = list(self._schedules)
+
+        return schedules
