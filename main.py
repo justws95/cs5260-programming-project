@@ -101,8 +101,8 @@ if __name__ == "__main__":
 
     DEFAULT_OUTPUT_SCHEDULE_FILE = "./simulation_output/output.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 3
-    DEFAULT_FRONTIER_SIZE = 250
+    DEFAULT_DEPTH_BOUND = 50
+    DEFAULT_FRONTIER_SIZE = 25
 
     print("Calling Country Scheduler")
     country_scheduler(

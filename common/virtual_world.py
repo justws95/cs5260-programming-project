@@ -2,11 +2,11 @@
 
 
 import math
+import heapq
 import random
 import itertools
 
 from copy import deepcopy
-from queue import PriorityQueue
 
 from .state_node import StateNode
 from .state_mutating_actions import Transfer, Transform
@@ -44,7 +44,7 @@ class VirtualWorld:
         self._MAX_TRANSFER_SCALAR = 0.33
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.25
         self._REWARD_DISCOUNT_GAMMA = 0.05
-        self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
+        self._TRANSFORM_SUCCESS_PROBABILITY = 0.975
         self._SCHEDULE_FAILURE_REWARD = -1.5
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
@@ -227,12 +227,12 @@ class VirtualWorld:
 
             # Calculate the maximum and minimum number of Transfers that can be performed
             max_number_transfers = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
-            min_number_transfers = math.ceil(max_scalar * self._MIN_TRANSFORM_SCALAR)
+            min_number_transfers = math.floor(max_scalar * self._MIN_TRANSFORM_SCALAR)
 
             # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
             decrement = max_number_transfers
 
-            while decrement >= min_number_transfers:
+            while decrement > min_number_transfers:
                 # Instantiate a Transform and build the child node
                 transform_t = Transform(country=self.primary_actor_country, transform=t, scalar=decrement, is_self=True)
                 child_state_node = self._build_child_transform_node(parent_node=node, transform=transform_t)
@@ -510,6 +510,8 @@ class VirtualWorld:
         # Finally, calculate the expected utility of the transfer
         expected_utility = (schedule_success_prob * state_node._discounted_reward) + ((1 - schedule_success_prob) * self._SCHEDULE_FAILURE_REWARD)
 
+        state_node._expected_utility = expected_utility
+
         return expected_utility
     
 
@@ -539,13 +541,92 @@ class VirtualWorld:
             print("This case should never have been reached!")
 
         return state_node._expected_utility
+    
 
+    def _get_schedule_from_state_node_and_parents(self, node: StateNode):
+        """Traverse back up the search tree to get the schedule to arrive at this state.
+
+        Parameters
+        --------------------
+        node : StateNode
+            The StateNode whose schedule is being retrieved
+
+        Returns
+        --------------------
+        actions: list[StateNodes]
+            A list of StateNodes representing the schedule
+        """
+        actions = []
+
+        while node != self._simulation_root_node:
+            actions.append(node.action)
+            node = node.parent
+
+        # Reverse the list to appear in chronological order
+        actions.reverse()
+
+        for action in actions:
+            print(f"{action}")
+
+        return actions
+
+
+    def _recursively_search_for_schedules(self, node: StateNode, frontier: list):
+        """Recursively find TARGET_NUMBER_SCHEDULES solution schedules.
+
+        Parameters
+        --------------------
+        node : StateNode
+            The StateNode to be recursively searched
+        frontier : list[StateNodes]
+            Priority queue of StateNodes comprising the search frontier
+
+        Returns
+        --------------------
+        schedule: list[StateNodes]
+            A list of StateNodes representing the schedule
+        """
+        print(f"Current Depth -> {node.depth}")
+        schedule = []
+
+        # Check if base case (i.e. Targeted Depth) has been reached
+        if node.depth >= self.DEPTH_BOUND:
+            print("Target depth reached")
+            self._get_schedule_from_state_node_and_parents(node)
+            return schedule
+
+        self._find_possible_child_states_for_node(node)
+
+        # Take a random sample of these states to explore
+        states_to_explore = node.get_child_states()
+        sample_quantifier = math.floor(len(states_to_explore) * self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR)
+        states_to_explore = random.sample(states_to_explore, sample_quantifier)
+
+        # Calculate the expected utility of each state
+        for state in states_to_explore:
+            self._calculate_expected_utility(state_node=state)
+
+        # Push the scored nodes into the priority queue
+        for state in states_to_explore:
+            if len(frontier) < self.MAX_FRONTIER_SIZE:
+                heapq.heappush(frontier, (state.get_expected_utility(), state))
+            else:
+                heapq.heappushpop(frontier, (state.get_expected_utility(), state))
+
+        # Greedily pop the largest expected utility state from the frontier
+        best_next_state = heapq.nlargest(1, frontier)[0]
+        best_next_state_node = best_next_state[1]
+
+        # Recursively search
+        self._recursively_search_for_schedules(best_next_state_node, frontier=[])
+
+        # Default case, should never be reached in normal execution
+        return "DEFAULT CASE REACHED"
     
     def run_simulation(self):
         """Run the simulation to find solution schedules."""
         print("Running the simulation, terminate early with Ctrl + c.")
 
-        
         # Set up for the run of the simulation
         num_schedules_found = 0
         root = StateNode(is_root_node=True, 
@@ -555,38 +636,17 @@ class VirtualWorld:
                 parent=None)
         
         self._simulation_root_node = root
-        
-        # Create the frontier
-        frontier = PriorityQueue(maxsize=self.MAX_FRONTIER_SIZE)
 
-        
-        """
-            Search for schedule solutions until either the target number of schedules
-            is found or the user halts execution with Ctrl-c.
-        """
+        # Search for solution schedules
         try:
-            node = root
-
             # Calculate Expected Utility for starting state
             self._apply_state_quality_function(root)
 
-            #while num_schedules_found < self.TARGET_NUMBER_SCHEDULES:
-            #    continue
-            # Find all possible child states that can be entered
-            print("Finding possible child states")
-            self._find_possible_child_states_for_node(node)
-
-            # Take a random sample of these states to explore
-            states_to_explore = node.get_child_states()
-            print(f"Total children -> {len(states_to_explore)}")
-
-            # Calculate the expected utility of each state
-            for state in states_to_explore:
-                self._calculate_expected_utility(state_node=state)
-
-
-
-
+            while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
+                frontier = []
+                schedule = self._recursively_search_for_schedules(root, frontier=frontier)
+                self._schedules.append(schedule)
+                frontier.clear()
 
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c

@@ -1,6 +1,7 @@
 """Defines a node for the search tree. Contains a world state at a given depth."""
 
 
+from __future__ import annotations
 from copy import deepcopy
 
 from .world_state import WorldState
@@ -32,6 +33,24 @@ class StateNode:
         self.parent = parent
 
         return
+    
+
+    def __lt__(self, other: 'StateNode'):
+        """Overload the less than operator for instances of StateNode.
+
+        Parameters
+        --------------------
+        other : StateNode
+            The StateNode being compared to this one.
+
+        Returns
+        --------------------
+        lt : boolean
+            True if this.expected_utility < other.expected_utility else False
+        """
+        lt = True if self._expected_utility < other.get_expected_utility() else False
+        
+        return lt
     
 
     def get_child_states(self):
@@ -81,4 +100,17 @@ class StateNode:
         pre_state = deepcopy(self._pre_action_state)
 
         return pre_state
+
+
+    def get_expected_utility(self):
+        """Get the expected utility of this StateNode.
+
+        Returns
+        --------------------
+        eu : float
+            The expected utility of this StateNode
+        """
+        eu = deepcopy(self._expected_utility)
+
+        return eu
     
