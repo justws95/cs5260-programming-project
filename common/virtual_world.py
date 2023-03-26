@@ -5,6 +5,9 @@ import math
 import random
 import itertools
 
+from copy import deepcopy
+from queue import PriorityQueue
+
 from .state_node import StateNode
 from .state_mutating_actions import Transfer, Transform
 from .world_state import WorldState
@@ -36,11 +39,16 @@ class VirtualWorld:
         self._simulation_root_node = None
 
         # HYPERPARAMETERS
+        self._MIN_TRANSFORM_SCALAR = 0.15
         self._MAX_TRANSFORM_SCALAR = 0.75
         self._MAX_TRANSFER_SCALAR = 0.33
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.25
         self._REWARD_DISCOUNT_GAMMA = 0.05
         self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
+        self._SCHEDULE_FAILURE_REWARD = -1.5
+        self._LOGISTIC_FUNCTION_L = 1
+        self._LOGISTIC_FUNCTION_X_NOT = 0
+        self._LOGISTIC_FUNCTION_K = 1
 
         return
     
@@ -102,8 +110,8 @@ class VirtualWorld:
         
         Parameters
         --------------------
-        node : StateNode
-            the node whose possible Transfer child states are being determined
+        state : StateNode
+            The state whose quality is being determined
         
         Returns
         --------------------
@@ -126,13 +134,53 @@ class VirtualWorld:
         for resource, amount in primary_actor_state.items():
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
-            
-
             impact = (weight * proportionality_constant * amount) / population
             state_quality += impact
 
         # Set the value in the StateNode instance
         state._state_quality = state_quality
+
+        return state_quality
+
+
+    # NOTE: This really could be done more optimally and needs a refactor, ignoring DRY principle for now...
+    def _apply_state_quality_function_to_dict(self, state: dict):
+        """Calculate the state quality for a given dict.
+        
+        Per the description in the project write up I started with the following State Quality Function:
+
+        Weighted sum of resource factors, normalized by the population resource, such as wRi ∗ cRi ∗ ARi /APopulation, 
+        where A Ri is the amount of a resource, and c Ri is a proportionality constant (e.g., 2 units food 
+        per person, 0.5 houses per person). The proportionality constant is taken from the resource weights initially
+        read in during program initialization.
+        
+        Parameters
+        --------------------
+        state : dict
+            The dict whose possible Transfer child states are being determined
+        
+        Returns
+        --------------------
+        state_quality: float
+            A float representing the computed state quality
+        """
+        state_quality = 0
+
+        # Initial proportionality constants NOTE: These will need to eventually be reexamined
+        PROPORTIONALITY_CONSTANTS = {
+            'Housing' : 0.5,
+        }
+
+        # Get the state for the relevant actor
+        actor_state = state
+        population = actor_state['Population']
+
+        # Calculate the state quality by iterating over the resources
+        for resource, amount in actor_state.items():
+            weight = self.resource_weights.get_weight_for_resource(resource)
+            proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
+            impact = (weight * proportionality_constant * amount) / population
+            state_quality += impact
 
         return state_quality 
     
@@ -177,10 +225,14 @@ class VirtualWorld:
             # The maximum Transform scalar is the minimum resource scalar
             max_scalar = min(scalar_dict.values())
 
-            # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
-            decrement = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
+            # Calculate the maximum and minimum number of Transfers that can be performed
+            max_number_transfers = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
+            min_number_transfers = math.ceil(max_scalar * self._MIN_TRANSFORM_SCALAR)
 
-            while decrement > 0:
+            # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
+            decrement = max_number_transfers
+
+            while decrement >= min_number_transfers:
                 # Instantiate a Transform and build the child node
                 transform_t = Transform(country=self.primary_actor_country, transform=t, scalar=decrement, is_self=True)
                 child_state_node = self._build_child_transform_node(parent_node=node, transform=transform_t)
@@ -230,6 +282,9 @@ class VirtualWorld:
         world_state = node.world_state.get_world_dict()
         countries = node.world_state.get_countries()
         resources = node.world_state.get_resources()
+
+        # Do not allow for the transfer or Population
+        resources = [r for r in resources if r != 'Population']
         
         # Find all permutations of countries and resources
         country_pairs = [p for p in itertools.permutations(countries, 2)]
@@ -286,10 +341,15 @@ class VirtualWorld:
             the possible child StateNode instance
         """
         new_world_state = WorldState(isInitial=False, isClone=True, state_to_clone=parent_node.world_state)
+        prior_world_state = deepcopy(new_world_state)
+
         new_world_state.update_world_state_with_transfer(transfer)
 
         # Instantiate the StateNode of this potential child
         child_state_node = StateNode(parent_node.depth + 1, new_world_state, transfer, is_root_node=False, parent=parent_node)
+
+        # Set the pre-action world state for this StateNode
+        child_state_node.set_pre_action_world_state(prior_world_state)
 
         return child_state_node
     
@@ -354,7 +414,7 @@ class VirtualWorld:
         discounted_reward : float 
             The discounted reward of this StateNode
         """
-        discounted_reward = self._REWARD_DISCOUNT_GAMMA * state_node._undiscounted_reward
+        discounted_reward = pow(self._REWARD_DISCOUNT_GAMMA, state_node.depth) * state_node._undiscounted_reward
         state_node._discounted_reward = discounted_reward
 
         return discounted_reward
@@ -379,6 +439,30 @@ class VirtualWorld:
         return expected_utility
     
 
+    def _calculate_country_accepts_transfer_probability(self, discounted_reward: float):
+        """Calculate the probability that a country accepts a transfer using the logistic function.
+
+        Parameters
+        --------------------
+        discounted_reward : float
+            The discounted reward of this transfer
+
+        Returns
+        --------------------
+        prob : float 
+            The probability this transfer is accepted
+        """
+        L = self._LOGISTIC_FUNCTION_L
+        x_0 = self._LOGISTIC_FUNCTION_X_NOT
+        k = self._LOGISTIC_FUNCTION_K
+        e = math.e # Euler's number
+        x = discounted_reward
+
+        prob = L / (1 + pow(e, (-k * (x - x_0))))
+
+        return prob
+    
+
     def _calculate_expected_utility_of_transfer_state_node(self, state_node: StateNode):
         """Calculate the expected utility for a Transfer type StateNode.
 
@@ -389,11 +473,42 @@ class VirtualWorld:
 
         Returns
         --------------------
-        expected_utility: float 
+        expected_utility : float 
             The expected utility of this StateNode
         """
-        expected_utility = state_node._discounted_reward * self._TRANSFORM_SUCCESS_PROBABILITY
-        state_node._expected_utility= expected_utility
+        # Get the state of the relevant actors pre and post Transform
+        prior_world_state = state_node.get_pre_action_world_state().get_world_dict()
+        new_world_state = state_node.world_state.get_world_dict()
+
+        giver = state_node.action.from_country 
+        receiver = state_node.action.to_country
+
+        if giver == self.primary_actor_country:
+            alternate_actor = receiver
+        elif receiver == self.primary_actor_country:
+            alternate_actor = giver
+        else:
+            print("THIS STATE SHOULD NEVER BE REACHED!!!")
+
+        alternate_actor_prior_world_state = prior_world_state[alternate_actor]
+        alternate_actor_new_world_state = new_world_state[alternate_actor]
+
+        # Calculate the discounted reward for the non-self country
+        prior_quality = self._apply_state_quality_function_to_dict(alternate_actor_prior_world_state)
+        post_quality = self._apply_state_quality_function_to_dict(alternate_actor_new_world_state)
+
+        alternate_actor_undiscounted_reward = post_quality - prior_quality
+        alternate_actor_discounted_reward = pow(self._REWARD_DISCOUNT_GAMMA, state_node.depth) * alternate_actor_undiscounted_reward
+
+        # Calculate the probability that each country accepts the transfer
+        alternate_actor_accepts = self._calculate_country_accepts_transfer_probability(alternate_actor_discounted_reward)
+        primary_actor_accepts = self._calculate_country_accepts_transfer_probability(state_node._discounted_reward)
+
+        # Calculate the probability that the schedule will succeed
+        schedule_success_prob = alternate_actor_accepts * primary_actor_accepts
+
+        # Finally, calculate the expected utility of the transfer
+        expected_utility = (schedule_success_prob * state_node._discounted_reward) + ((1 - schedule_success_prob) * self._SCHEDULE_FAILURE_REWARD)
 
         return expected_utility
     
@@ -421,7 +536,7 @@ class VirtualWorld:
         elif isinstance(state_node.action, Transform):
             self._calculate_expected_utility_of_transform_state_node(state_node)
         else:
-            print("This is a something else....")
+            print("This case should never have been reached!")
 
         return state_node._expected_utility
 
@@ -440,6 +555,10 @@ class VirtualWorld:
                 parent=None)
         
         self._simulation_root_node = root
+        
+        # Create the frontier
+        frontier = PriorityQueue(maxsize=self.MAX_FRONTIER_SIZE)
+
         
         """
             Search for schedule solutions until either the target number of schedules

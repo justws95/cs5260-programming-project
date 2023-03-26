@@ -1,6 +1,11 @@
 """Defines a node for the search tree. Contains a world state at a given depth."""
 
 
+from copy import deepcopy
+
+from .world_state import WorldState
+
+
 class StateNode:
     """Model a node in the search tree traversal. Contains a WorldState instance."""
 
@@ -9,6 +14,7 @@ class StateNode:
         self.depth = depth
         self.world_state = world_state
         self.action = action
+        self._pre_action_state = None
 
         self._possible_child_states = []
         self._state_quality = None
@@ -48,5 +54,31 @@ class StateNode:
         """
         self._possible_child_states = child_states
 
-        return 
+        return
+    
+
+    def set_pre_action_world_state(self, pre_state: WorldState):
+        """Set the state dict from the parent node corresponding the the world state before an action was taken.
+
+        Parameters
+        --------------------
+        pre_state : WorldState
+            A WorldState representing the world state before an action occurred
+        """
+        self._pre_action_state = deepcopy(pre_state)
+
+        return
+    
+    
+    def get_pre_action_world_state(self):
+        """Get the WorldState from the parent node corresponding the the world state before an action was taken.
+
+        Returns
+        --------------------
+        pre_state : WorldState
+            A dict representing the world state before an action occurred
+        """
+        pre_state = deepcopy(self._pre_action_state)
+
+        return pre_state
     
