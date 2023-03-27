@@ -118,20 +118,12 @@ def init_simulation(primary_country_actor,
 
 if __name__ == "__main__":
     DEFAULT_COUNTRY_NAME = "Atlantis"
-
-    #DEFAULT_RESOURCE_FILE = "./virtual_worlds/project_writeup_example/resources.csv"
-    #DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/project_writeup_example/initial_state.csv"
-
-    #DEFAULT_RESOURCE_FILE = "./virtual_worlds/expansion_on_writeup/resources.csv"
-    #DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/expansion_on_writeup/initial_state.csv"
-
     DEFAULT_RESOURCE_FILE = "./virtual_worlds/add_food_resource/resources.csv"
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
-
-    DEFAULT_OUTPUT_SCHEDULE_FILE = "output.txt"
+    DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 28
-    DEFAULT_FRONTIER_SIZE = 350
+    DEFAULT_DEPTH_BOUND = 150
+    DEFAULT_FRONTIER_SIZE = 3500
 
     print("Calling Country Scheduler")
     country_scheduler(

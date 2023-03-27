@@ -39,22 +39,23 @@ class VirtualWorld:
         self._schedules = []
         self._simulation_root_node = None
         self._simulation_root_node_quality = None
-        self._set_all_derived_resources = False
-        self._derived_resources = [] 
+
+        # Cache transforms
+        self._transform_cache = {}
 
         # HYPERPARAMETERS
         self._MIN_TRANSFORM_SCALAR = 0.15
         self._MAX_TRANSFORM_SCALAR = 0.75
-        self._MAX_TRANSFER_SCALAR = 0.33
-        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.25
+        self._MAX_TRANSFER_SCALAR = 0.50
+        self._MIN_TRANSFER_SCALAR = 0.05
+        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 1.0
         self._REWARD_DISCOUNT_GAMMA = 0.05
         self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
         self._SCHEDULE_FAILURE_REWARD = -1.5
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
         self._LOGISTIC_FUNCTION_K = 1
-        self._DERIVED_RESOURCE_SCALAR = 0.1
-        self._HOUSING_DEVIATION_SCALAR = 0.05
+        self._HOUSING_DEVIATION_SCALAR = 0.1
 
         return
     
@@ -150,10 +151,6 @@ class VirtualWorld:
                 # Scale housing to this ratio
                 impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
 
-            # Scale derived resources to increase their worth
-            if resource in self._derived_resources:
-                impact += (impact * self._DERIVED_RESOURCE_SCALAR)
-
             state_quality += impact
 
         # Set the value in the StateNode instance
@@ -208,10 +205,6 @@ class VirtualWorld:
                 # Scale housing to this ratio
                 impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
 
-            # Scale derived resources to increase their worth
-            if resource in self._derived_resources:
-                impact += (impact * self._DERIVED_RESOURCE_SCALAR)
-
             state_quality += impact
 
         return state_quality 
@@ -250,13 +243,7 @@ class VirtualWorld:
             for o in t.get_outputs_list():
                 transform_resources.append(o)
 
-            # Find derived resources if they have not already been found
-            if not self._set_all_derived_resources:
-                derived_list = [x for x in t.get_outputs_list() if x not in t.get_inputs_list() and x.find('Waste') == -1]
-                for d in derived_list:
-                    if d not in self._derived_resources:
-                        self._derived_resources.append(d)
-
+            # Check if this transform is possible for this world (i.e. that transform resources exist in weighted resources)
             for tr in transform_resources:
                 if tr not in self.valid_resource_names:
                     skip_transform = True
@@ -267,8 +254,17 @@ class VirtualWorld:
             # Find all possible transforms
             t_as_dict = {}
 
-            for key, val in t.get_inputs_tuples_list():
-                t_as_dict[key] = val
+            input_tuples = t.get_inputs_tuples_list()
+            input_tuples_str = "".join([str(t[0]) + str(t[1] + "_") for t in input_tuples])
+
+            if input_tuples_str not in self._transform_cache.keys():
+                for key, val in input_tuples:
+                    t_as_dict[key] = val
+
+                # Cache this to avoid duplicate work in later iterations
+                self._transform_cache[input_tuples_str] = deepcopy(t_as_dict)
+            else:
+                t_as_dict = self._transform_cache[input_tuples_str]
 
             # Determine scalar multiples that are reachable and append backwards
             scalar_dict = {}
@@ -282,13 +278,13 @@ class VirtualWorld:
             max_scalar = min(scalar_dict.values())
 
             # Calculate the maximum and minimum number of Transfers that can be performed
-            max_number_transfers = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
-            min_number_transfers = math.floor(max_scalar * self._MIN_TRANSFORM_SCALAR)
+            max_number_transforms = math.floor(max_scalar * self._MAX_TRANSFORM_SCALAR)
+            min_number_transforms = math.floor(max_scalar * self._MIN_TRANSFORM_SCALAR)
 
             # Append each possible scalar multiple to the list of potential child states, scaled via hyperparameter setting
-            decrement = max_number_transfers
+            decrement = max_number_transforms
 
-            while decrement > min_number_transfers:
+            while decrement > min_number_transforms:
                 # Instantiate a Transform and build the child node
                 transform_t = Transform(country=self.primary_actor_country, transform=t, scalar=decrement, is_self=True)
                 child_state_node = self._build_child_transform_node(parent_node=node, transform=transform_t)
@@ -298,9 +294,6 @@ class VirtualWorld:
 
                 decrement = decrement - 1
         
-        # Set the flag to no longer search for derived resources
-        self._set_all_derived_resources = True
-
         return transform_list
     
 
@@ -363,9 +356,10 @@ class VirtualWorld:
 
                 # Scale total_available with the hyperparameter setting
                 scaled_total_available = math.floor(total_available * self._MAX_TRANSFER_SCALAR)
+                min_number_transfers = math.floor(total_available * self._MIN_TRANSFER_SCALAR)
 
                 # Determine all possible possible Transfers
-                while scaled_total_available > 0:
+                while scaled_total_available > min_number_transfers:
                     transfer_t = Transfer(from_country=giver, 
                                           to_country=receiver, 
                                           resource_name=r, 
@@ -663,11 +657,22 @@ class VirtualWorld:
             self._calculate_expected_utility(state_node=state)
 
         # Push the scored nodes into the priority queue
+        while len(states_to_explore) > 0:
+            if len(frontier) < self.MAX_FRONTIER_SIZE:
+                heapq.heappush(frontier, (1 / state.get_expected_utility(), states_to_explore.pop()))
+            else:
+                heapq.heappushpop(frontier, (1 / state.get_expected_utility(), states_to_explore.pop()))
+
+        # Free up some memory
+        node.set_child_states([])
+
+        """
         for state in states_to_explore:
             if len(frontier) < self.MAX_FRONTIER_SIZE:
                 heapq.heappush(frontier, (1 / state.get_expected_utility(), state))
             else:
                 heapq.heappushpop(frontier, (1 / state.get_expected_utility(), state))
+        """
 
         # Greedily pop the largest expected utility state from the frontier
         best_next_state = heapq.heappop(frontier)
