@@ -128,10 +128,10 @@ if __name__ == "__main__":
     DEFAULT_RESOURCE_FILE = "./virtual_worlds/add_food_resource/resources.csv"
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
 
-    DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_final_run.txt"
+    DEFAULT_OUTPUT_SCHEDULE_FILE = "output.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 24
-    DEFAULT_FRONTIER_SIZE = 500
+    DEFAULT_DEPTH_BOUND = 28
+    DEFAULT_FRONTIER_SIZE = 350
 
     print("Calling Country Scheduler")
     country_scheduler(
