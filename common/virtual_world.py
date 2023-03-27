@@ -38,6 +38,7 @@ class VirtualWorld:
 
         self._schedules = []
         self._simulation_root_node = None
+        self._simulation_root_node_quality = None
         self._set_all_derived_resources = False
         self._derived_resources = [] 
 
@@ -52,6 +53,8 @@ class VirtualWorld:
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
         self._LOGISTIC_FUNCTION_K = 1
+        self._DERIVED_RESOURCE_SCALAR = 0.1
+        self._HOUSING_DEVIATION_SCALAR = 0.05
 
         return
     
@@ -138,6 +141,19 @@ class VirtualWorld:
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
             impact = (weight * proportionality_constant * amount) / population
+
+            # Scale housing to target 4 people per house
+            if resource == 'Housing':
+                population_to_housing_ratio = amount / population
+                distance_from_target_ratio = abs(4 - population_to_housing_ratio)
+
+                # Scale housing to this ratio
+                impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
+
+            # Scale derived resources to increase their worth
+            if resource in self._derived_resources:
+                impact += (impact * self._DERIVED_RESOURCE_SCALAR)
+
             state_quality += impact
 
         # Set the value in the StateNode instance
@@ -183,6 +199,19 @@ class VirtualWorld:
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
             impact = (weight * proportionality_constant * amount) / population
+
+            # Scale housing to target 4 people per house
+            if resource == 'Housing':
+                population_to_housing_ratio = amount / population
+                distance_from_target_ratio = abs(4 - population_to_housing_ratio)
+
+                # Scale housing to this ratio
+                impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
+
+            # Scale derived resources to increase their worth
+            if resource in self._derived_resources:
+                impact += (impact * self._DERIVED_RESOURCE_SCALAR)
+
             state_quality += impact
 
         return state_quality 
@@ -425,7 +454,7 @@ class VirtualWorld:
         undiscounted_reward : float 
             The undiscounted reward of this StateNode
         """
-        undiscounted_reward = state_node._state_quality - state_node.parent._state_quality 
+        undiscounted_reward = state_node._state_quality - self._simulation_root_node_quality
         state_node._undiscounted_reward = undiscounted_reward
 
         return undiscounted_reward
@@ -520,14 +549,15 @@ class VirtualWorld:
         else:
             print("THIS STATE SHOULD NEVER BE REACHED!!!")
 
-        alternate_actor_prior_world_state = prior_world_state[alternate_actor]
+        alternate_actor_root_state = self._simulation_root_node.world_state.get_world_dict()[alternate_actor]
         alternate_actor_new_world_state = new_world_state[alternate_actor]
 
         # Calculate the discounted reward for the non-self country
-        prior_quality = self._apply_state_quality_function_to_dict(alternate_actor_prior_world_state)
+        root_quality = self._apply_state_quality_function_to_dict(alternate_actor_root_state)
         post_quality = self._apply_state_quality_function_to_dict(alternate_actor_new_world_state)
 
-        alternate_actor_undiscounted_reward = post_quality - prior_quality
+        # Calculate the discounted reward
+        alternate_actor_undiscounted_reward = post_quality - root_quality
         alternate_actor_discounted_reward = pow(self._REWARD_DISCOUNT_GAMMA, state_node.depth) * alternate_actor_undiscounted_reward
 
         # Calculate the probability that each country accepts the transfer
@@ -613,6 +643,7 @@ class VirtualWorld:
         schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
+        print(f"Current Depth in Search Tree: {node.depth}")
         schedule = []
 
         # Check if base case (i.e. Targeted Depth) has been reached
@@ -634,16 +665,16 @@ class VirtualWorld:
         # Push the scored nodes into the priority queue
         for state in states_to_explore:
             if len(frontier) < self.MAX_FRONTIER_SIZE:
-                heapq.heappush(frontier, (state.get_expected_utility(), state))
+                heapq.heappush(frontier, (1 / state.get_expected_utility(), state))
             else:
-                heapq.heappushpop(frontier, (state.get_expected_utility(), state))
+                heapq.heappushpop(frontier, (1 / state.get_expected_utility(), state))
 
         # Greedily pop the largest expected utility state from the frontier
-        best_next_state = heapq.nlargest(1, frontier)[0]
+        best_next_state = heapq.heappop(frontier)
         best_next_state_node = best_next_state[1]
 
         # Recursively search
-        schedule = self._recursively_search_for_schedules(best_next_state_node, frontier=[])
+        schedule = self._recursively_search_for_schedules(best_next_state_node, frontier=frontier)
 
         return schedule
     
@@ -665,6 +696,7 @@ class VirtualWorld:
         try:
             # Calculate Expected Utility for starting state
             self._apply_state_quality_function(root)
+            self._simulation_root_node_quality = root._state_quality
 
             while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
                 frontier = []

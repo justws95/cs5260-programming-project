@@ -33,21 +33,22 @@ def country_scheduler(your_country_name,
     schedules = virtual_world.get_simulation_schedules()
 
     # Write out the schedules that were found
-    time_stamp = str(datetime.datetime.now())
-    output_dir = './simulation_output/' + time_stamp.replace(" ", "_")
-    
-    os.mkdir(output_dir)
+    if len(schedules)> 0:
+        time_stamp = str(datetime.datetime.now())
+        output_dir = './simulation_output/' + time_stamp.replace(" ", "_")
+        
+        os.mkdir(output_dir)
 
-    output_file_path = output_dir + "/" + output_schedule_file_name
+        output_file_path = output_dir + "/" + output_schedule_file_name
 
-    with open(output_file_path, "w+") as f:
-        for schedule in schedules:
-            f.write("[\n")
+        with open(output_file_path, "w+") as f:
+            for schedule in schedules:
+                f.write("[\n")
 
-            for state_node in schedule:
-                f.write(f"{state_node.action} E_U: {state_node._expected_utility}\n")
+                for state_node in schedule:
+                    f.write(f"{state_node.action} E_U: {state_node._expected_utility}\n")
 
-            f.write("]\n")
+                f.write("]\n")
 
     return
 
@@ -117,17 +118,21 @@ def init_simulation(primary_country_actor,
 
 if __name__ == "__main__":
     DEFAULT_COUNTRY_NAME = "Atlantis"
+
     #DEFAULT_RESOURCE_FILE = "./virtual_worlds/project_writeup_example/resources.csv"
     #DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/project_writeup_example/initial_state.csv"
+
+    #DEFAULT_RESOURCE_FILE = "./virtual_worlds/expansion_on_writeup/resources.csv"
+    #DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/expansion_on_writeup/initial_state.csv"
 
     DEFAULT_RESOURCE_FILE = "./virtual_worlds/add_food_resource/resources.csv"
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
 
-    DEFAULT_OUTPUT_SCHEDULE_FILE = "simulation_output.txt"
-    DEFAULT_NUM_SCHEDULES = 3
-    DEFAULT_DEPTH_BOUND = 100
-    DEFAULT_FRONTIER_SIZE = 250
-    
+    DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_3.txt"
+    DEFAULT_NUM_SCHEDULES = 1
+    DEFAULT_DEPTH_BOUND = 23
+    DEFAULT_FRONTIER_SIZE = 125
+
     print("Calling Country Scheduler")
     country_scheduler(
         your_country_name=DEFAULT_COUNTRY_NAME, 
