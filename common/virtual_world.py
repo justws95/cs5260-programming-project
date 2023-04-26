@@ -3,6 +3,7 @@
 
 import math
 import heapq
+import queue
 import random
 import itertools
 
@@ -50,10 +51,10 @@ class VirtualWorld:
         self._MAX_TRANSFORM_SCALAR = 0.75
         self._MAX_TRANSFER_SCALAR = 0.50
         self._MIN_TRANSFER_SCALAR = 0.35
-        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.15
-        self._REWARD_DISCOUNT_GAMMA = 0.5
+        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.35
+        self._REWARD_DISCOUNT_GAMMA = 0.825
         self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
-        self._SCHEDULE_FAILURE_REWARD = -0.5
+        self._SCHEDULE_FAILURE_REWARD = -0.75
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
         self._LOGISTIC_FUNCTION_K = 1.0
@@ -418,8 +419,8 @@ class VirtualWorld:
         possible_child_states.extend(transform_child_states)
 
         # Find all possible child state_nodes that can arise from Transfer actions
-        #transfer_child_states = self._find_all_possible_transfers(node=node)
-        #possible_child_states.extend(transfer_child_states)
+        transfer_child_states = self._find_all_possible_transfers(node=node)
+        possible_child_states.extend(transfer_child_states)
 
         node.set_child_states(possible_child_states)
 
@@ -687,7 +688,7 @@ class VirtualWorld:
 
         Returns
         --------------------
-        schedules : list[list[StateNodes]]
+        schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
         self.logger.debug(f"Beginning schedule search from root node.", no_print=False)
@@ -710,6 +711,18 @@ class VirtualWorld:
 
             # Take a random sample of these states to explore
             states_to_explore = search_node.get_child_states()
+
+            # Skip if no child states were found
+            if len(states_to_explore) <= 0:
+                """
+                best_next_state = heapq.heappop(frontier)
+                best_next_state_node = best_next_state[1]
+                search_node = best_next_state_node
+                """
+
+                continue
+
+            # Randomly sample states to reduce overall state space
             sample_quantifier = math.floor(len(states_to_explore) * self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR)
             states_to_explore = random.sample(states_to_explore, sample_quantifier)
 
@@ -720,17 +733,28 @@ class VirtualWorld:
             # Push the scored nodes into the priority queue
             while len(states_to_explore) > 0:
                 state = states_to_explore.pop()
-                eu = (state.get_expected_utility()) * -1
+                eu = state.get_expected_utility()
 
+                """
                 if len(frontier) < self.MAX_FRONTIER_SIZE:
                     heapq.heappush(frontier, (eu, state))
                 else:
                     heapq.heappushpop(frontier, (eu, state))
+                """
+                pq_item = {'eu' : eu, 'node': state}
+                frontier.append(pq_item)
+
+            # Sort and resize the frontier with the new states
+            frontier = sorted(frontier, key=lambda k: k['eu'], reverse=True)
+            frontier = frontier[:self.MAX_FRONTIER_SIZE]
 
             # Greedily pop the largest expected utility state from the frontier
+            """
             best_next_state = heapq.heappop(frontier)
             best_next_state_node = best_next_state[1]
-            
+            """
+            best_next_state = frontier[0]
+            best_next_state_node = best_next_state['node']
             search_node = best_next_state_node
 
         return schedule
@@ -741,7 +765,6 @@ class VirtualWorld:
         self.logger.debug("Running the simulation, terminate early with Ctrl + c.")
 
         # Set up for the run of the simulation
-        num_schedules_found = 0
         root = StateNode(is_root_node=True, 
                 depth=0, 
                 world_state=self.initial_state, 
@@ -777,6 +800,11 @@ class VirtualWorld:
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
             self.logger.warning("User has halted simulation execution.")
+
+        for S in self._schedules:
+            world_state_at_schedule_end = S[len(S) - 1]
+            self.logger.debug(f"\nWorldState at end:\n {world_state_at_schedule_end.world_state}")
+
 
         return
     

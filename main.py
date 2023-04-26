@@ -27,7 +27,7 @@ def country_scheduler(your_country_name,
         target_number_of_schedules=num_output_schedules, 
         depth_bound=depth_bound, frontier_max_size=frontier_max_size)
     
-    logger.debug(virtual_world, no_print=True)
+    logger.debug(virtual_world, no_print=False)
 
     logger.debug("\n\n\nRunning the simulation....")
     virtual_world.run_simulation()
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
     DEFAULT_NUM_SCHEDULES = 1
     DEFAULT_DEPTH_BOUND = 50
-    DEFAULT_FRONTIER_SIZE = 350
+    DEFAULT_FRONTIER_SIZE = 50
 
     logger = SimulationLogger()
 
