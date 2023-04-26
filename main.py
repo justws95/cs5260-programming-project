@@ -125,7 +125,7 @@ if __name__ == "__main__":
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
     DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 100
+    DEFAULT_DEPTH_BOUND = 50
     DEFAULT_FRONTIER_SIZE = 350
 
     logger = SimulationLogger()

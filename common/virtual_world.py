@@ -418,8 +418,8 @@ class VirtualWorld:
         possible_child_states.extend(transform_child_states)
 
         # Find all possible child state_nodes that can arise from Transfer actions
-        transfer_child_states = self._find_all_possible_transfers(node=node)
-        possible_child_states.extend(transfer_child_states)
+        #transfer_child_states = self._find_all_possible_transfers(node=node)
+        #possible_child_states.extend(transfer_child_states)
 
         node.set_child_states(possible_child_states)
 
@@ -653,20 +653,16 @@ class VirtualWorld:
         # Calculate the expected utility of each state
         for state in states_to_explore:
             self._calculate_expected_utility(state_node=state)
-            #exit()
 
         # Push the scored nodes into the priority queue
         while len(states_to_explore) > 0:
-            eu = state.get_expected_utility()
-
-            # Protect against division by zero
-            if eu == 0:
-                eu += 0.0000000000001
+            state = states_to_explore.pop()
+            eu = (state.get_expected_utility()) * -1
 
             if len(frontier) < self.MAX_FRONTIER_SIZE:
-                heapq.heappush(frontier, (1 / eu, states_to_explore.pop()))
+                heapq.heappush(frontier, (eu, state))
             else:
-                heapq.heappushpop(frontier, (1 / eu, states_to_explore.pop()))
+                heapq.heappushpop(frontier, (eu, state))
 
         # Free up some memory
         node.set_child_states([])
@@ -680,6 +676,66 @@ class VirtualWorld:
 
         return schedule
     
+
+    def _iteratively_search_for_schedule(self, root: StateNode):
+        """Search iteratively for solution schedules.
+
+        Parameters
+        --------------------
+        root : StateNode
+            The root StateNode of the search tree
+
+        Returns
+        --------------------
+        schedules : list[list[StateNodes]]
+            A list of StateNodes representing the schedule
+        """
+        self.logger.debug(f"Beginning schedule search from root node.", no_print=False)
+        schedule = []
+        frontier = []
+        schedule_found = False
+        search_node = root
+
+        while schedule_found is False:
+            # Check if base case (i.e. Targeted Depth) has been reached
+            if search_node.depth >= self.DEPTH_BOUND:
+                self.logger.debug("Schedule of target depth has been found!")
+                schedule = self._get_schedule_from_state_node_and_parents(search_node)
+                break
+            else:
+                self.logger.debug(f"Current search node depth in search tree -> {search_node.depth}")
+        
+            # Find possible child states
+            self._find_possible_child_states_for_node(search_node)
+
+            # Take a random sample of these states to explore
+            states_to_explore = search_node.get_child_states()
+            sample_quantifier = math.floor(len(states_to_explore) * self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR)
+            states_to_explore = random.sample(states_to_explore, sample_quantifier)
+
+            # Calculate the expected utility of each state
+            for state in states_to_explore:
+                self._calculate_expected_utility(state_node=state)
+
+            # Push the scored nodes into the priority queue
+            while len(states_to_explore) > 0:
+                state = states_to_explore.pop()
+                eu = (state.get_expected_utility()) * -1
+
+                if len(frontier) < self.MAX_FRONTIER_SIZE:
+                    heapq.heappush(frontier, (eu, state))
+                else:
+                    heapq.heappushpop(frontier, (eu, state))
+
+            # Greedily pop the largest expected utility state from the frontier
+            best_next_state = heapq.heappop(frontier)
+            best_next_state_node = best_next_state[1]
+            
+            search_node = best_next_state_node
+
+        return schedule
+    
+
     def run_simulation(self):
         """Run the simulation to find solution schedules."""
         self.logger.debug("Running the simulation, terminate early with Ctrl + c.")
@@ -693,8 +749,8 @@ class VirtualWorld:
                 parent=None)
         
         self._simulation_root_node = root
-        self.logger.debug("Root node primary actor state:")
-        self.logger.debug(f"{root.world_state.get_world_dict()[self.primary_actor_country]}")
+        self.logger.debug("Root node primary actor state:", no_print=True)
+        self.logger.debug(f"{root.world_state.get_world_dict()[self.primary_actor_country]}", no_print=True)
 
         # Search for solution schedules
         try:
@@ -704,15 +760,23 @@ class VirtualWorld:
             self.logger.debug(f"Root node state quality: {root._state_quality}")
 
 
+            #while True:
             while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
+                """
+                #NOTE: Switching from recursive to iterative strategy to avoid overflowing the stack
+
                 frontier = []
                 schedule = self._recursively_search_for_schedules(root, frontier=frontier)
                 self._schedules.append(schedule)
                 self.logger.info(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
                 frontier.clear()
+                """
+                schedule = self._iteratively_search_for_schedule(root=root)
+                self._schedules.append(schedule)
+                self.logger.info(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
-            self.logger.warning("User has halted simulation execution early.")
+            self.logger.warning("User has halted simulation execution.")
 
         return
     
