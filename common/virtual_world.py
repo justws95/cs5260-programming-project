@@ -47,14 +47,14 @@ class VirtualWorld:
         self._MIN_TRANSFORM_SCALAR = 0.15
         self._MAX_TRANSFORM_SCALAR = 0.75
         self._MAX_TRANSFER_SCALAR = 0.50
-        self._MIN_TRANSFER_SCALAR = 0.05
+        self._MIN_TRANSFER_SCALAR = 0.35
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 1.0
         self._REWARD_DISCOUNT_GAMMA = 0.05
         self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
         self._SCHEDULE_FAILURE_REWARD = -1.5
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
-        self._LOGISTIC_FUNCTION_K = 1
+        self._LOGISTIC_FUNCTION_K = 0.97
         self._HOUSING_DEVIATION_SCALAR = 0.1
 
         return
@@ -487,7 +487,7 @@ class VirtualWorld:
             The expected utility of this StateNode
         """
         expected_utility = state_node._discounted_reward * self._TRANSFORM_SUCCESS_PROBABILITY
-        state_node._expected_utility= expected_utility
+        state_node._expected_utility = expected_utility
 
         return expected_utility
     
@@ -530,7 +530,6 @@ class VirtualWorld:
             The expected utility of this StateNode
         """
         # Get the state of the relevant actors pre and post Transform
-        prior_world_state = state_node.get_pre_action_world_state().get_world_dict()
         new_world_state = state_node.world_state.get_world_dict()
 
         giver = state_node.action.from_country 
@@ -658,10 +657,16 @@ class VirtualWorld:
 
         # Push the scored nodes into the priority queue
         while len(states_to_explore) > 0:
+            eu = state.get_expected_utility()
+
+            # Protect against division by zero
+            if eu == 0:
+                eu += 0.0000000000001
+
             if len(frontier) < self.MAX_FRONTIER_SIZE:
-                heapq.heappush(frontier, (1 / state.get_expected_utility(), states_to_explore.pop()))
+                heapq.heappush(frontier, (1 / eu, states_to_explore.pop()))
             else:
-                heapq.heappushpop(frontier, (1 / state.get_expected_utility(), states_to_explore.pop()))
+                heapq.heappushpop(frontier, (1 / eu, states_to_explore.pop()))
 
         # Free up some memory
         node.set_child_states([])

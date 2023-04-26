@@ -135,3 +135,7 @@ dmypy.json
 # Simulation output files
 simulation_output
 simulation_output/
+
+# Log files
+logs
+logs/

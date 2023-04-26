@@ -6,6 +6,7 @@ import datetime
 
 from common import VirtualWorld
 from util import load_initial_state_file, load_resources_file, parse_transform_template
+from logging_utils import SimulationLogger
 
 
 
@@ -17,23 +18,25 @@ def country_scheduler(your_country_name,
     depth_bound,
     frontier_max_size):
     """Top level method for running a simulation."""
-    print("Creating a virtual world....\n\n\n")
+    logger = SimulationLogger()
+
+    logger.debug("Creating a virtual world....\n\n\n")
     virtual_world = init_simulation(your_country_name, 
         resource_file_name=resources_filename, 
         initial_state_file_name=initial_state_file_name, 
         target_number_of_schedules=num_output_schedules, 
         depth_bound=depth_bound, frontier_max_size=frontier_max_size)
     
-    #print(virtual_world)
+    logger.debug(virtual_world, no_print=True)
 
-    print("\n\n\n")
-    print("Running the simulation....")
+    logger.debug("\n\n\nRunning the simulation....")
     virtual_world.run_simulation()
 
     schedules = virtual_world.get_simulation_schedules()
 
     # Write out the schedules that were found
-    if len(schedules)> 0:
+    if len(schedules) > 0:
+        logger.info(f"Writing solutions for {len(schedules)} that were found")
         time_stamp = str(datetime.datetime.now())
         output_dir = './simulation_output/' + time_stamp.replace(" ", "_")
         
@@ -85,8 +88,8 @@ def init_simulation(primary_country_actor,
     world_state = load_initial_state_file(initial_state_file_name)
     resource_weights = load_resources_file(resource_file_name)
 
-    print("INITIAL WORLD STATE")
-    print(world_state)
+    logger.debug("INITIAL WORLD STATE", no_print=True)
+    logger.debug(world_state, no_print=True)
 
     # Load transform templates
     template_dir = './templates'
@@ -122,10 +125,12 @@ if __name__ == "__main__":
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
     DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 150
-    DEFAULT_FRONTIER_SIZE = 3500
+    DEFAULT_DEPTH_BOUND = 750
+    DEFAULT_FRONTIER_SIZE = 35000
 
-    print("Calling Country Scheduler")
+    logger = SimulationLogger()
+
+    logger.debug("Calling Country Scheduler")
     country_scheduler(
         your_country_name=DEFAULT_COUNTRY_NAME, 
         resources_filename=DEFAULT_RESOURCE_FILE,
