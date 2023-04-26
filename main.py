@@ -20,7 +20,7 @@ def country_scheduler(your_country_name,
     """Top level method for running a simulation."""
     logger = SimulationLogger()
 
-    logger.debug("Creating a virtual world....\n\n\n")
+    logger.debug("Creating a virtual world....")
     virtual_world = init_simulation(your_country_name, 
         resource_file_name=resources_filename, 
         initial_state_file_name=initial_state_file_name, 

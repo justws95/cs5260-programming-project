@@ -25,7 +25,7 @@ class SimulationLogger(object):
             Boolean value representing if log messages should also be written to stdout/stderr 
     """
 
-    def __new__(cls, logging_level: int=None, log_file_dir: str=None, log_file_name: str=None, is_verbose: bool=None):
+    def __new__(cls, logging_level: int=None, log_file_dir: str=None, log_file_name: str=None, is_verbose: bool=True):
         """Overload the __new__ magic method to implement the singleton pattern.
 
         The __new__ magic method is called whenever a new object is created. By overloading
@@ -160,7 +160,7 @@ class SimulationLogger(object):
         """
         logging.debug(message)
 
-        if self.is_verbose and not no_print:
+        if self.is_verbose and no_print is False:
             self._print_to_stdout(message=message)
 
 
@@ -176,7 +176,7 @@ class SimulationLogger(object):
         """
         logging.info(message)
 
-        if self.is_verbose and not no_print:
+        if self.is_verbose and no_print is False:
             self._print_to_stdout(message=message)
 
 
@@ -192,7 +192,7 @@ class SimulationLogger(object):
         """
         logging.warning(message)
 
-        if self.is_verbose and not no_print:
+        if self.is_verbose and no_print is False:
             self._print_to_stderr(message=message)
 
 
@@ -208,7 +208,7 @@ class SimulationLogger(object):
         """
         logging.critical(message)
 
-        if self.is_verbose and not no_print:
+        if self.is_verbose and no_print is False:
             self._print_to_stderr(message=message)
 
         return

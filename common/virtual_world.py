@@ -12,6 +12,8 @@ from .state_node import StateNode
 from .state_mutating_actions import Transfer, Transform
 from .world_state import WorldState
 
+from logging_utils import SimulationLogger
+
 
 
 class VirtualWorld:
@@ -56,6 +58,9 @@ class VirtualWorld:
         self._LOGISTIC_FUNCTION_X_NOT = 0
         self._LOGISTIC_FUNCTION_K = 0.97
         self._HOUSING_DEVIATION_SCALAR = 0.1
+
+        # Initialize logger
+        self.logger = SimulationLogger()
 
         return
     
@@ -540,7 +545,7 @@ class VirtualWorld:
         elif receiver == self.primary_actor_country:
             alternate_actor = giver
         else:
-            print("THIS STATE SHOULD NEVER BE REACHED!!!")
+            self.logger.critical("THIS STATE SHOULD NEVER BE REACHED!!!")
 
         alternate_actor_root_state = self._simulation_root_node.world_state.get_world_dict()[alternate_actor]
         alternate_actor_new_world_state = new_world_state[alternate_actor]
@@ -591,7 +596,7 @@ class VirtualWorld:
         elif isinstance(state_node.action, Transform):
             self._calculate_expected_utility_of_transform_state_node(state_node)
         else:
-            print("This case should never have been reached!")
+            self.logger.critical("This case should never have been reached!")
 
         return state_node._expected_utility
     
@@ -636,7 +641,7 @@ class VirtualWorld:
         schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
-        print(f"Current Depth in Search Tree: {node.depth}")
+        self.logger.debug(f"Current Depth in Search Tree: {node.depth}")
         schedule = []
 
         # Check if base case (i.e. Targeted Depth) has been reached
@@ -690,7 +695,7 @@ class VirtualWorld:
     
     def run_simulation(self):
         """Run the simulation to find solution schedules."""
-        print("Running the simulation, terminate early with Ctrl + c.")
+        self.logger.debug("Running the simulation, terminate early with Ctrl + c.")
 
         # Set up for the run of the simulation
         num_schedules_found = 0
@@ -712,11 +717,11 @@ class VirtualWorld:
                 frontier = []
                 schedule = self._recursively_search_for_schedules(root, frontier=frontier)
                 self._schedules.append(schedule)
-                print(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
+                self.logger.info(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
                 frontier.clear()
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
-            print("User has halted simulation execution early.")
+            self.logger.warning("User has halted simulation execution early.")
 
         return
     
