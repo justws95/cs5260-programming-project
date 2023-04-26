@@ -50,14 +50,13 @@ class VirtualWorld:
         self._MAX_TRANSFORM_SCALAR = 0.75
         self._MAX_TRANSFER_SCALAR = 0.50
         self._MIN_TRANSFER_SCALAR = 0.35
-        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 1.0
-        self._REWARD_DISCOUNT_GAMMA = 0.05
+        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.15
+        self._REWARD_DISCOUNT_GAMMA = 0.5
         self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
-        self._SCHEDULE_FAILURE_REWARD = -1.5
+        self._SCHEDULE_FAILURE_REWARD = -0.5
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
-        self._LOGISTIC_FUNCTION_K = 0.97
-        self._HOUSING_DEVIATION_SCALAR = 0.1
+        self._LOGISTIC_FUNCTION_K = 1.0
 
         # Initialize logger
         self.logger = SimulationLogger()
@@ -142,24 +141,20 @@ class VirtualWorld:
         primary_actor_state = world_state_dict_for_node[self.primary_actor_country]
         population = primary_actor_state['Population']
 
+        self.logger.debug(f"Primary actor state at StateNode", no_print=True)
+        self.logger.debug(primary_actor_state, no_print=True)
+
         # Calculate the state quality by iterating over the resources
         for resource, amount in primary_actor_state.items():
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
             impact = (weight * proportionality_constant * amount) / population
-
-            # Scale housing to target 4 people per house
-            if resource == 'Housing':
-                population_to_housing_ratio = amount / population
-                distance_from_target_ratio = abs(4 - population_to_housing_ratio)
-
-                # Scale housing to this ratio
-                impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
-
             state_quality += impact
 
         # Set the value in the StateNode instance
         state._state_quality = state_quality
+
+        self.logger.debug(f"The quality of this state is {state_quality}", no_print=True)
 
         return state_quality
 
@@ -201,15 +196,6 @@ class VirtualWorld:
             weight = self.resource_weights.get_weight_for_resource(resource)
             proportionality_constant = float(PROPORTIONALITY_CONSTANTS[resource]) if resource in PROPORTIONALITY_CONSTANTS.keys() else 1
             impact = (weight * proportionality_constant * amount) / population
-
-            # Scale housing to target 4 people per house
-            if resource == 'Housing':
-                population_to_housing_ratio = amount / population
-                distance_from_target_ratio = abs(4 - population_to_housing_ratio)
-
-                # Scale housing to this ratio
-                impact -= (distance_from_target_ratio * self._HOUSING_DEVIATION_SCALAR)
-
             state_quality += impact
 
         return state_quality 
@@ -575,20 +561,26 @@ class VirtualWorld:
 
     def _calculate_expected_utility(self, state_node: StateNode):
         """Calculate the expected utility of a StateNode.
-
+{state_node.world_state. get_world_dict()[self.primary_actor_country]}")
         Parameters
         --------------------
         state_node : StateNode
             The StateNode to calculate the expected utility from
         """
+        self.logger.debug(f"Action that caused this state: {state_node.action}", no_print=True)
+        self.logger.debug(f"World State of primary actor at this state node:\n {state_node.world_state.get_world_dict()[self.primary_actor_country]}", no_print=True)
+
         # Get the state quality of each child state
         self._apply_state_quality_function(state_node)
+        self.logger.debug(f"State quality of this state: {state_node._state_quality}", no_print=True)
 
         # Calculate the undiscounted reward of each child state
         self._calculate_undiscounted_reward(state_node)
+        self.logger.debug(f"Undiscounted Reward of this state: {state_node._undiscounted_reward}", no_print=True)
 
         # Calculate the discounted reward of each child state
         self._calculate_discounted_reward(state_node)
+        self.logger.debug(f"Discounted Reward of this state: {state_node._discounted_reward}", no_print=True)
 
         # Finally, calculate the expected utility
         if isinstance(state_node.action, Transfer):
@@ -597,6 +589,8 @@ class VirtualWorld:
             self._calculate_expected_utility_of_transform_state_node(state_node)
         else:
             self.logger.critical("This case should never have been reached!")
+
+        self.logger.debug(f"Expected Utility of this state: {state_node._expected_utility}", no_print=True)
 
         return state_node._expected_utility
     
@@ -641,7 +635,7 @@ class VirtualWorld:
         schedule : list[StateNodes]
             A list of StateNodes representing the schedule
         """
-        self.logger.debug(f"Current Depth in Search Tree: {node.depth}")
+        self.logger.debug(f"Current Depth in Search Tree: {node.depth}", no_print=False)
         schedule = []
 
         # Check if base case (i.e. Targeted Depth) has been reached
@@ -659,6 +653,7 @@ class VirtualWorld:
         # Calculate the expected utility of each state
         for state in states_to_explore:
             self._calculate_expected_utility(state_node=state)
+            #exit()
 
         # Push the scored nodes into the priority queue
         while len(states_to_explore) > 0:
@@ -675,14 +670,6 @@ class VirtualWorld:
 
         # Free up some memory
         node.set_child_states([])
-
-        """
-        for state in states_to_explore:
-            if len(frontier) < self.MAX_FRONTIER_SIZE:
-                heapq.heappush(frontier, (1 / state.get_expected_utility(), state))
-            else:
-                heapq.heappushpop(frontier, (1 / state.get_expected_utility(), state))
-        """
 
         # Greedily pop the largest expected utility state from the frontier
         best_next_state = heapq.heappop(frontier)
@@ -706,12 +693,16 @@ class VirtualWorld:
                 parent=None)
         
         self._simulation_root_node = root
+        self.logger.debug("Root node primary actor state:")
+        self.logger.debug(f"{root.world_state.get_world_dict()[self.primary_actor_country]}")
 
         # Search for solution schedules
         try:
             # Calculate Expected Utility for starting state
             self._apply_state_quality_function(root)
             self._simulation_root_node_quality = root._state_quality
+            self.logger.debug(f"Root node state quality: {root._state_quality}")
+
 
             while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
                 frontier = []
