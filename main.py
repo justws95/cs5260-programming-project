@@ -125,8 +125,8 @@ if __name__ == "__main__":
     DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/part_2_experiment/initial_state.csv"
     DEFAULT_OUTPUT_SCHEDULE_FILE = "part_2_experiment.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 17
-    DEFAULT_FRONTIER_SIZE = 1250
+    DEFAULT_DEPTH_BOUND = 50
+    DEFAULT_FRONTIER_SIZE = 2500
 
     logger = SimulationLogger()
 
