@@ -66,4 +66,28 @@ However, transforms that are not possible because the resources they use/create 
 
 **util/** contains utilities for reading the template files, initial world state files, and resource weight files.
 
+**logging_utils/** module that contains SimulationLogger class. Implemented in the singleton design pattern, this utility class is imported throughout
+the project to assist with logging.
+
 **virtual_worlds/** contains the initial world states and resource weights for the virtual test worlds I used
+
+**simulation_output/** contains output files generated from program executions
+
+**logs/** contains log files generated from program runs
+
+## Key Classes
+
+**VirtualWorld** Handles simulation responsibilities. Acts upon the other classes to carry out a simulation.
+
+**Transfer** Models a Transfer type operation.
+
+**Transform** Models a Tranform type operation.
+
+**StateNode** Node element of a the search tree representing the world state as it exists at this step in time
+
+**ResourceWeights** Represents the relative weights of each resource
+
+**TransformTemplate** Represents a Transform that can take place.
+
+**SimulationLogger** Application logging utility.
+

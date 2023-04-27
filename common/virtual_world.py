@@ -53,7 +53,7 @@ class VirtualWorld:
         self._MIN_TRANSFER_SCALAR = 0.15
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.85
         self._REWARD_DISCOUNT_GAMMA = 0.985
-        self._TRANSFORM_SUCCESS_PROBABILITY = 0.75
+        self._TRANSFORM_SUCCESS_PROBABILITY = 0.825
         self._SCHEDULE_FAILURE_REWARD = -0.75
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
@@ -745,11 +745,6 @@ class VirtualWorld:
         except KeyboardInterrupt:
             # User interrupt the program with ctrl+c
             self.logger.warning("User has halted simulation execution.")
-
-        for S in self._schedules:
-            world_state_at_schedule_end = S[len(S) - 1]
-            self.logger.debug(f"\nWorldState at end:\n {world_state_at_schedule_end.world_state}")
-
 
         return
     
