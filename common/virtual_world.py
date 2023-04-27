@@ -8,6 +8,7 @@ import random
 import itertools
 
 from copy import deepcopy
+from operator import itemgetter
 
 from .state_node import StateNode
 from .state_mutating_actions import Transfer, Transform
@@ -735,8 +736,7 @@ class VirtualWorld:
             self.logger.debug(f"Root node state quality: {root._state_quality}")
 
 
-            #while True:
-            while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
+            while True:
                 #NOTE: Switching from recursive to iterative strategy to avoid overflowing the stack
 
                 schedule = self._iteratively_search_for_schedule(root=root)
@@ -757,5 +757,24 @@ class VirtualWorld:
             A list of StateNodes representing the schedules the simulation found
         """
         schedules = list(self._schedules)
+
+        if len(schedules) > self.TARGET_NUMBER_SCHEDULES:
+            schedule_dicts = []
+
+            for S in schedules:
+                last_node = S[len(S) - 1]
+                eu = last_node._expected_utility
+
+                as_dict = {'eu': eu, 'schedule': S}
+
+                schedule_dicts.append(deepcopy(as_dict))
+
+            schedule_dicts = sorted(schedule_dicts, key=lambda k: k['eu'], reverse=True)
+            schedule_dicts = schedule_dicts[:self.TARGET_NUMBER_SCHEDULES]
+
+            schedules.clear()
+            
+            for sd in schedule_dicts:
+                schedules.append(sd['schedule'])
 
         return schedules
