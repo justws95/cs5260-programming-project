@@ -126,7 +126,7 @@ if __name__ == "__main__":
     DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
     DEFAULT_NUM_SCHEDULES = 1
     DEFAULT_DEPTH_BOUND = 18
-    DEFAULT_FRONTIER_SIZE = 5000
+    DEFAULT_FRONTIER_SIZE = 1250
 
     logger = SimulationLogger()
 

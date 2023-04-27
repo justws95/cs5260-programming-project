@@ -1,0 +1,17 @@
+Resource,Weight
+Population,0
+MetallicElements,0
+Timber,0
+Farm,0
+Food,2.3
+Water,0
+MetallicAlloys,0.7
+Electronics,1.3
+Housing,4.0
+MetallicAlloysWaste,-0.1
+ElectronicsWaste,-0.2
+HousingWaste,-0.2
+FarmWaste,-0.05
+RawEnergy,0
+UsableEnergy,0.5
+WasteWater,-0.85

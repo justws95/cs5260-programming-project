@@ -48,9 +48,9 @@ class VirtualWorld:
 
         # HYPERPARAMETERS
         self._MIN_TRANSFORM_SCALAR = 0.15
-        self._MAX_TRANSFORM_SCALAR = 0.75
-        self._MAX_TRANSFER_SCALAR = 0.50
-        self._MIN_TRANSFER_SCALAR = 0.35
+        self._MAX_TRANSFORM_SCALAR = 0.55
+        self._MAX_TRANSFER_SCALAR = 0.35
+        self._MIN_TRANSFER_SCALAR = 0.15
         self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 1.0
         self._REWARD_DISCOUNT_GAMMA = 0.985
         self._TRANSFORM_SUCCESS_PROBABILITY = 1.0
@@ -419,8 +419,8 @@ class VirtualWorld:
         possible_child_states.extend(transform_child_states)
 
         # Find all possible child state_nodes that can arise from Transfer actions
-        #transfer_child_states = self._find_all_possible_transfers(node=node)
-        #possible_child_states.extend(transfer_child_states)
+        transfer_child_states = self._find_all_possible_transfers(node=node)
+        possible_child_states.extend(transfer_child_states)
 
         node.set_child_states(possible_child_states)
 
@@ -550,7 +550,7 @@ class VirtualWorld:
         primary_actor_accepts = self._calculate_country_accepts_transfer_probability(state_node._discounted_reward)
 
         # Calculate the probability that the schedule will succeed
-        schedule_success_prob = alternate_actor_accepts * primary_actor_accepts
+        schedule_success_prob = alternate_actor_accepts * 1#NOTE: Assumes self would never propose a schedule it would not accept primary_actor_accepts
 
         # Finally, calculate the expected utility of the transfer
         expected_utility = (schedule_success_prob * state_node._discounted_reward) + ((1 - schedule_success_prob) * self._SCHEDULE_FAILURE_REWARD)
@@ -619,64 +619,6 @@ class VirtualWorld:
         schedule.reverse()
 
         return schedule
-
-
-    def _recursively_search_for_schedules(self, node: StateNode, frontier: list):
-        """Recursively find TARGET_NUMBER_SCHEDULES solution schedules.
-
-        Parameters
-        --------------------
-        node : StateNode
-            The StateNode to be recursively searched
-        frontier : list[StateNodes]
-            Priority queue of StateNodes comprising the search frontier
-
-        Returns
-        --------------------
-        schedule : list[StateNodes]
-            A list of StateNodes representing the schedule
-        """
-        self.logger.debug(f"Current Depth in Search Tree: {node.depth}", no_print=False)
-        schedule = []
-
-        # Check if base case (i.e. Targeted Depth) has been reached
-        if node.depth >= self.DEPTH_BOUND:
-            schedule = self._get_schedule_from_state_node_and_parents(node)
-            return schedule
-
-        self._find_possible_child_states_for_node(node)
-
-        # Take a random sample of these states to explore
-        states_to_explore = node.get_child_states()
-        sample_quantifier = math.floor(len(states_to_explore) * self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR)
-        states_to_explore = random.sample(states_to_explore, sample_quantifier)
-
-        # Calculate the expected utility of each state
-        for state in states_to_explore:
-            self._calculate_expected_utility(state_node=state)
-
-        # Push the scored nodes into the priority queue
-        while len(states_to_explore) > 0:
-            state = states_to_explore.pop()
-            eu = (state.get_expected_utility()) * -1
-
-            if len(frontier) < self.MAX_FRONTIER_SIZE:
-                heapq.heappush(frontier, (eu, state))
-            else:
-                heapq.heappushpop(frontier, (eu, state))
-
-        # Free up some memory
-        node.set_child_states([])
-
-        # Greedily pop the largest expected utility state from the frontier
-        best_next_state = heapq.heappop(frontier)
-        best_next_state_node = best_next_state[1]
-
-        # Recursively search
-        schedule = self._recursively_search_for_schedules(best_next_state_node, frontier=frontier)
-
-        return schedule
-    
 
     def _iteratively_search_for_schedule(self, root: StateNode):
         """Search iteratively for solution schedules.
@@ -795,15 +737,8 @@ class VirtualWorld:
 
             #while True:
             while len(self._schedules) < self.TARGET_NUMBER_SCHEDULES:
-                """
                 #NOTE: Switching from recursive to iterative strategy to avoid overflowing the stack
 
-                frontier = []
-                schedule = self._recursively_search_for_schedules(root, frontier=frontier)
-                self._schedules.append(schedule)
-                self.logger.info(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
-                frontier.clear()
-                """
                 schedule = self._iteratively_search_for_schedule(root=root)
                 self._schedules.append(schedule)
                 self.logger.info(f"Schedule has been found {len(self._schedules)} of {self.TARGET_NUMBER_SCHEDULES}")
