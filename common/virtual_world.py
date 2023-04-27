@@ -51,9 +51,9 @@ class VirtualWorld:
         self._MAX_TRANSFORM_SCALAR = 0.75
         self._MAX_TRANSFER_SCALAR = 0.50
         self._MIN_TRANSFER_SCALAR = 0.35
-        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 0.35
-        self._REWARD_DISCOUNT_GAMMA = 0.825
-        self._TRANSFORM_SUCCESS_PROBABILITY = 0.925
+        self._RANDOM_POSSIBLE_NEXT_STATES_SCALAR = 1.0
+        self._REWARD_DISCOUNT_GAMMA = 0.985
+        self._TRANSFORM_SUCCESS_PROBABILITY = 1.0
         self._SCHEDULE_FAILURE_REWARD = -0.75
         self._LOGISTIC_FUNCTION_L = 1
         self._LOGISTIC_FUNCTION_X_NOT = 0
@@ -419,8 +419,8 @@ class VirtualWorld:
         possible_child_states.extend(transform_child_states)
 
         # Find all possible child state_nodes that can arise from Transfer actions
-        transfer_child_states = self._find_all_possible_transfers(node=node)
-        possible_child_states.extend(transfer_child_states)
+        #transfer_child_states = self._find_all_possible_transfers(node=node)
+        #possible_child_states.extend(transfer_child_states)
 
         node.set_child_states(possible_child_states)
 
@@ -697,6 +697,8 @@ class VirtualWorld:
         schedule_found = False
         search_node = root
 
+        counter = 0
+
         while schedule_found is False:
             # Check if base case (i.e. Targeted Depth) has been reached
             if search_node.depth >= self.DEPTH_BOUND:
@@ -704,7 +706,7 @@ class VirtualWorld:
                 schedule = self._get_schedule_from_state_node_and_parents(search_node)
                 break
             else:
-                self.logger.debug(f"Current search node depth in search tree -> {search_node.depth}")
+                self.logger.debug(f"[{counter}]  Current search node depth in search tree -> {search_node.depth}")
         
             # Find possible child states
             self._find_possible_child_states_for_node(search_node)
@@ -719,6 +721,9 @@ class VirtualWorld:
                 best_next_state_node = best_next_state[1]
                 search_node = best_next_state_node
                 """
+                best_next_state = frontier.pop(0)
+                best_next_state_node = best_next_state['node']
+                search_node = best_next_state_node
 
                 continue
 
@@ -748,14 +753,19 @@ class VirtualWorld:
             frontier = sorted(frontier, key=lambda k: k['eu'], reverse=True)
             frontier = frontier[:self.MAX_FRONTIER_SIZE]
 
+            # Free up some memory
+            search_node.set_child_states([])
+
             # Greedily pop the largest expected utility state from the frontier
             """
             best_next_state = heapq.heappop(frontier)
             best_next_state_node = best_next_state[1]
             """
-            best_next_state = frontier[0]
+            best_next_state = frontier.pop(0)
             best_next_state_node = best_next_state['node']
             search_node = best_next_state_node
+
+            counter += 1
 
         return schedule
     
