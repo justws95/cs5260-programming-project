@@ -121,11 +121,11 @@ def init_simulation(primary_country_actor,
 
 if __name__ == "__main__":
     DEFAULT_COUNTRY_NAME = "Atlantis"
-    DEFAULT_RESOURCE_FILE = "./virtual_worlds/add_food_resource/resources.csv"
-    DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/add_food_resource/initial_state.csv"
-    DEFAULT_OUTPUT_SCHEDULE_FILE = "add_food_resource_1.txt"
+    DEFAULT_RESOURCE_FILE = "./virtual_worlds/part_2_experiment/resources.csv"
+    DEFAULT_INITIAL_STATE_FILE = "./virtual_worlds/part_2_experiment/initial_state.csv"
+    DEFAULT_OUTPUT_SCHEDULE_FILE = "part_2_experiment.txt"
     DEFAULT_NUM_SCHEDULES = 1
-    DEFAULT_DEPTH_BOUND = 18
+    DEFAULT_DEPTH_BOUND = 17
     DEFAULT_FRONTIER_SIZE = 1250
 
     logger = SimulationLogger()

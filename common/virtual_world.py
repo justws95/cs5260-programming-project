@@ -550,7 +550,7 @@ class VirtualWorld:
         primary_actor_accepts = self._calculate_country_accepts_transfer_probability(state_node._discounted_reward)
 
         # Calculate the probability that the schedule will succeed
-        schedule_success_prob = alternate_actor_accepts * 1#NOTE: Assumes self would never propose a schedule it would not accept primary_actor_accepts
+        schedule_success_prob = alternate_actor_accepts # NOTE: Assumes self would never propose a schedule it would not accept primary_actor_accepts
 
         # Finally, calculate the expected utility of the transfer
         expected_utility = (schedule_success_prob * state_node._discounted_reward) + ((1 - schedule_success_prob) * self._SCHEDULE_FAILURE_REWARD)
